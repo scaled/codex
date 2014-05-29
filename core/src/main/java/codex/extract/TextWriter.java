@@ -6,6 +6,7 @@ package codex.extract;
 
 import java.io.PrintWriter;
 import codex.model.*;
+import java.util.Collection;
 
 /**
  * A {@code Writer} implementation that emits a simple text-based representation of the metadata.
@@ -16,57 +17,56 @@ public class TextWriter extends Writer {
     _out = out;
   }
 
-  public void openUnit (String path) {
+  @Override public void openUnit (String path) {
     emit("unit", path);
     _indent += 1;
   }
 
-  public void openDef (String id, String name, Kind kind, Flavor flavor, boolean exported,
-                       int offset, int bodyStart, int bodyEnd) {
-    emit("def", id);
+  @Override public void openDef (Collection<String> id, String name, Kind kind, Flavor flavor,
+                                 boolean exported, int offset, int bodyStart, int bodyEnd) {
+    emit("def", idToString(id));
     emit("name", name);
     emit("kind", kind);
     emit("flavor", flavor);
     emit("exported", exported);
     emit("offset", offset);
-    emit("bodyStart", bodyStart);
-    emit("bodyEnd", bodyEnd);
+    emit("body", bodyStart, bodyEnd);
     _indent += 1;
   }
 
-  public void emitRelation (Relation relation, String target) {
-    emit("relation", relation, target);
+  @Override public void emitRelation (Relation relation, Collection<String> target) {
+    emit("relation", relation, idToString(target));
   }
 
-  public void emitSig (String text) {
-    emit("sig", text);
+  @Override public void emitSig (String text) {
+    emit("sig", text.replace('\n', '\t')); // TODO: undo this on in TextReader
   }
-  public void emitSigDef (String id, String name, Kind kind, int offset) {
-    emit("sigdef", "id", id);
+  @Override public void emitSigDef (Collection<String> id, String name, Kind kind, int offset) {
+    emit("sigdef", "id", idToString(id));
     emit("sigdef", "name", name);
     emit("sigdef", "kind", kind);
     emit("sigdef", "offset", offset);
   }
-  public void emitSigUse (String target, String name, Kind kind, int offset) {
-    emit("siguse", "target", target);
+  @Override public void emitSigUse (Collection<String> target, String name, Kind kind, int offset) {
+    emit("siguse", "target", idToString(target));
     emit("siguse", "name", name);
     emit("siguse", "kind", kind);
     emit("siguse", "offset", offset);
   }
 
-  public void emitDoc (int offset, int length) {
+  @Override public void emitDoc (int offset, int length) {
     emit("doc", "offset", offset);
     emit("doc", "length", length);
   }
-  public void emitDocUse (String target, String name, Kind kind, int offset) {
-    emit("docuse", "target", target);
+  @Override public void emitDocUse (Collection<String> target, String name, Kind kind, int offset) {
+    emit("docuse", "target", idToString(target));
     emit("docuse", "name", name);
     emit("docuse", "kind", kind);
     emit("docuse", "offset", offset);
   }
 
-  public void emitUse (String target, String name, Kind kind, int offset) {
-    emit("use", "target", target);
+  @Override public void emitUse (Collection<String> target, String name, Kind kind, int offset) {
+    emit("use", "target", idToString(target));
     emit("use", "name", name);
     emit("use", "kind", kind);
     emit("use", "offset", offset);
@@ -78,6 +78,15 @@ public class TextWriter extends Writer {
 
   public void closeUnit () {
     _indent -= 1;
+  }
+
+  private String idToString (Collection<String> target) {
+    StringBuilder buf = new StringBuilder();
+    for (String part : target) {
+      if (buf.length() > 0) buf.append('\t');
+      buf.append(part);
+    }
+    return buf.toString();
   }
 
   private PrintWriter emit (String key) {
@@ -96,7 +105,7 @@ public class TextWriter extends Writer {
   private void emit (String key, Object value1, Object value2) {
     PrintWriter out = emit(key);
     out.print(" ");
-    out.println(value1);
+    out.print(value1);
     out.print(" ");
     out.println(value2);
   }

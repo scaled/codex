@@ -5,6 +5,7 @@
 package codex.extract;
 
 import codex.model.*;
+import java.util.Collection;
 
 /**
  * Provides an API via which compilers or other code analyzers can emit Codex model data while
@@ -31,19 +32,19 @@ import codex.model.*;
 public abstract class Writer {
 
   public abstract void openUnit (String path);
-  public abstract void openDef (String id, String name, Kind kind, Flavor flavor, boolean exported,
-                                int offset, int bodyOffset, int bodyEnd);
+  public abstract void openDef (Collection<String> id, String name, Kind kind, Flavor flavor,
+                                boolean exported, int offset, int bodyOffset, int bodyEnd);
 
-  public abstract void emitRelation (Relation relation, String target);
+  public abstract void emitRelation (Relation relation, Collection<String> target);
 
   public abstract void emitSig (String text);
-  public abstract void emitSigDef (String id, String name, Kind kind, int offset);
-  public abstract void emitSigUse (String target, String name, Kind kind, int offset);
+  public abstract void emitSigDef (Collection<String> id, String name, Kind kind, int offset);
+  public abstract void emitSigUse (Collection<String> target, String name, Kind kind, int offset);
 
   public abstract void emitDoc (int offset, int length);
-  public abstract void emitDocUse (String target, String name, Kind kind, int offset);
+  public abstract void emitDocUse (Collection<String> target, String name, Kind kind, int offset);
 
-  public abstract void emitUse (String target, String name, Kind kind, int offset);
+  public abstract void emitUse (Collection<String> target, String name, Kind kind, int offset);
 
   public abstract void closeDef ();
   public abstract void closeUnit ();

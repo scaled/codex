@@ -15,5 +15,8 @@ public enum Relation {
   SUPERTYPE,
 
   /** Indicates that the source def inherits from the target def. */
-  INHERITS;
+  INHERITS,
+
+  /** Indicates that the source def overrides the target def. */
+  OVERRIDES;
 }
