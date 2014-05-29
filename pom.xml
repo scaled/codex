@@ -34,7 +34,7 @@
 
   <modules>
     <module>core</module>
-    <!-- <module>java</module> -->
+    <module>java</module>
     <!-- <module>scala</module> -->
   </modules>
 
