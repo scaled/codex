@@ -6,10 +6,9 @@ package codex.extract;
 
 import codex.model.Kind;
 import com.google.common.collect.Sets;
+import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.code.Symbol;
-import com.sun.tools.javac.code.Flags;
-// import com.sun.tools.javac.code.{Flags, Scope, Symbol, Type, Types, TypeTags}
 import com.sun.tools.javac.tree.JCTree.*;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.Pretty;
@@ -40,6 +39,8 @@ public class Utils {
       return List.of(""); // the "root" type's owner; nothing to see here, move it along
     }
     else if (sym instanceof ClassSymbol) {
+      ClassSymbol csym = (ClassSymbol)sym;
+      // TODO: use csym.classfile and csym.sourcefile to determine project for this symbol
       return targetForTypeSym(sym.owner).prepend(sym.name.toString());
     }
     else if (sym instanceof PackageSymbol) {
@@ -250,5 +251,4 @@ public class Utils {
       _writes = _writes.prepend(w -> w.emitSigUse(target, name, kind, offset));
     }
   }
-
 }
