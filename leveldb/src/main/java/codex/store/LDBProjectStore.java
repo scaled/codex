@@ -107,6 +107,10 @@ public class LDBProjectStore extends ProjectStore {
     return null; // TODO
   }
 
+  @Override public Optional<Def> def (Ref.Global ref) {
+    return Optional.empty(); // TODO
+  }
+
   @Override public Def def (int defId) {
     return reqById(DEFID_TO_DEF, defId).getDef();
   }

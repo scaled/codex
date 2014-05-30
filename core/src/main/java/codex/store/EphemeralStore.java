@@ -116,6 +116,12 @@ public class EphemeralStore extends ProjectStore {
     return Iterables.transform(idMap.copyIds(), ic -> def(ic.value));
   }
 
+  @Override public Optional<Def> def (Ref.Global ref) {
+    int id = _projectRefs.get(ref);
+    // TODO: we should probably freak out if we have an id mapping but no def...
+    return (id == 0) ? Optional.empty() : Optional.ofNullable(_defs.get(id));
+  }
+
   @Override public Def def (int defId) {
     return reqdef(defId, _defs.get(defId));
   }

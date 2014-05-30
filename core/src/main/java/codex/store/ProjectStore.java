@@ -28,6 +28,11 @@ public abstract class ProjectStore implements AutoCloseable {
   public abstract Iterable<Def> sourceDefs (Source source);
 
   /**
+   * Returns the def referred to by {@code ref}, if it is part of this project.
+   */
+  public abstract Optional<Def> def (Ref.Global ref);
+
+  /**
    * Returns the def with id {@code defId}.
    * @throws NoSuchElementException if no def exists with that id.
    */
