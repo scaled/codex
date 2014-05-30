@@ -31,7 +31,7 @@ import java.util.Collection;
  */
 public abstract class Writer {
 
-  public abstract void openUnit (String path);
+  public abstract void openUnit (Source path);
   public abstract void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
                                 boolean exported, int offset, int bodyOffset, int bodyEnd);
 

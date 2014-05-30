@@ -36,8 +36,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
   public void extract (Tree ast, Writer writer) throws IOException {
     JCCompilationUnit unit = (JCCompilationUnit)ast;
-    // TODO: someday we should be able to remove .getPath (or maybe even use toUri.toString)
-    writer.openUnit(unit.sourcefile.toUri().getPath());
+    // TODO: sort out how this will work when we get source from .jar/.zip files
+    writer.openUnit(new Source.File(unit.sourcefile.toUri().getPath()));
     _text = unit.sourcefile.getCharContent(true).toString();
     scan(ast, writer);
     writer.closeUnit();
