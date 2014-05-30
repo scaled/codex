@@ -388,11 +388,11 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     public final Map<String,DocBit> params = new HashMap<>();
     public List<DeferredWrite> uses = List.nil();
 
-    public DefDoc (int offset, int length, String text) {
-      this.offset = offset;
-      this.length = length;
+    public DefDoc (int start, int end, String text) {
+      this.offset = start;
+      this.length = end-start;
       try {
-        parseDoc(text.substring(offset, offset+length));
+        parseDoc(text);
       } catch (Exception e) {
         e.printStackTrace(System.err);
       }
@@ -425,7 +425,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
           if (tsym != null) {
             Ref.Global tid = targetForSym(target, tsym);
             Kind tkind = kindForSym(tsym);
-            uses = uses.prepend(w -> w.emitDocUse(tid, target, tkind, btm.start(2)));
+            int start = btm.start(2);
+            uses = uses.prepend(w -> w.emitDocUse(tid, target, tkind, start));
           }
           break;
         // TODO: case "value":
@@ -486,16 +487,17 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
   private DefDoc findDoc (int pos) {
     try {
-      int docEnd = _text.lastIndexOf("*/", pos);
-      if (docEnd == -1) return NO_DOC;
+      int docEndPre = _text.lastIndexOf("*/", pos);
+      if (docEndPre == -1) return NO_DOC;
       else {
-        String docToDef = _text.substring(docEnd+2, pos);
+        int docEnd = docEndPre + 2;
+        String docToDef = _text.substring(docEnd, pos);
         if (docToDef.trim().length() != 0) return NO_DOC;
         else {
           int commentStart = _text.lastIndexOf("/*", docEnd);
           int docStart = _text.lastIndexOf("/**", docEnd);
           if (docStart != commentStart) return NO_DOC;
-          else return new DefDoc(docStart, docEnd+2, _text);
+          else return new DefDoc(docStart, docEnd, _text.substring(docStart, docEnd));
         }
       }
     } catch (Exception e) {
