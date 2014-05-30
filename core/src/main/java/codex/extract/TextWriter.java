@@ -22,9 +22,9 @@ public class TextWriter extends Writer {
     _indent += 1;
   }
 
-  @Override public void openDef (Collection<String> id, String name, Kind kind, Flavor flavor,
+  @Override public void openDef (Id.Global id, String name, Kind kind, Flavor flavor,
                                  boolean exported, int offset, int bodyStart, int bodyEnd) {
-    emit("def", idToString(id));
+    emit("def", id);
     emit("name", name);
     emit("kind", kind);
     emit("flavor", flavor);
@@ -34,21 +34,21 @@ public class TextWriter extends Writer {
     _indent += 1;
   }
 
-  @Override public void emitRelation (Relation relation, Collection<String> target) {
-    emit("relation", relation, idToString(target));
+  @Override public void emitRelation (Relation relation, Id.Global target) {
+    emit("relation", relation, target);
   }
 
   @Override public void emitSig (String text) {
     emit("sig", text.replace('\n', '\t')); // TODO: undo this on in TextReader
   }
-  @Override public void emitSigDef (Collection<String> id, String name, Kind kind, int offset) {
-    emit("sigdef", "id", idToString(id));
+  @Override public void emitSigDef (Id.Global id, String name, Kind kind, int offset) {
+    emit("sigdef", "id", id);
     emit("sigdef", "name", name);
     emit("sigdef", "kind", kind);
     emit("sigdef", "offset", offset);
   }
-  @Override public void emitSigUse (Collection<String> target, String name, Kind kind, int offset) {
-    emit("siguse", "target", idToString(target));
+  @Override public void emitSigUse (Id.Global target, String name, Kind kind, int offset) {
+    emit("siguse", "target", target);
     emit("siguse", "name", name);
     emit("siguse", "kind", kind);
     emit("siguse", "offset", offset);
@@ -58,15 +58,15 @@ public class TextWriter extends Writer {
     emit("doc", "offset", offset);
     emit("doc", "length", length);
   }
-  @Override public void emitDocUse (Collection<String> target, String name, Kind kind, int offset) {
-    emit("docuse", "target", idToString(target));
+  @Override public void emitDocUse (Id.Global target, String name, Kind kind, int offset) {
+    emit("docuse", "target", target);
     emit("docuse", "name", name);
     emit("docuse", "kind", kind);
     emit("docuse", "offset", offset);
   }
 
-  @Override public void emitUse (Collection<String> target, String name, Kind kind, int offset) {
-    emit("use", "target", idToString(target));
+  @Override public void emitUse (Id.Global target, String name, Kind kind, int offset) {
+    emit("use", "target", target);
     emit("use", "name", name);
     emit("use", "kind", kind);
     emit("use", "offset", offset);
@@ -78,15 +78,6 @@ public class TextWriter extends Writer {
 
   public void closeUnit () {
     _indent -= 1;
-  }
-
-  private String idToString (Collection<String> target) {
-    StringBuilder buf = new StringBuilder();
-    for (String part : target) {
-      if (buf.length() > 0) buf.append('\t');
-      buf.append(part);
-    }
-    return buf.toString();
   }
 
   private PrintWriter emit (String key) {

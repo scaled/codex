@@ -4,6 +4,7 @@
 
 package codex.extract;
 
+import codex.model.Id;
 import codex.model.Kind;
 import com.google.common.collect.Sets;
 import com.sun.tools.javac.code.Flags;
@@ -34,27 +35,27 @@ public class Utils {
 
   // note the more general targetForSym in the tree traverser which can handle local names; this
   // can only handle type names, which is fine for handling targets in docs and signatures
-  public static List<String> targetForTypeSym (Symbol sym) {
+  public static Id.Global targetForTypeSym (Symbol sym) {
     if (sym == null) {
-      return List.of(""); // the "root" type's owner; nothing to see here, move it along
+      return Id.ROOT; // the "root" type's owner; nothing to see here, move it along
     }
     else if (sym instanceof ClassSymbol) {
       ClassSymbol csym = (ClassSymbol)sym;
       // TODO: use csym.classfile and csym.sourcefile to determine project for this symbol
-      return targetForTypeSym(sym.owner).prepend(sym.name.toString());
+      return targetForTypeSym(sym.owner).plus(sym.name.toString());
     }
     else if (sym instanceof PackageSymbol) {
-      return List.of(sym.toString()); // keep the dots between packages
+      return Id.ROOT.plus(sym.toString()); // keep the dots between packages
     }
     else if (sym instanceof TypeSymbol) {
-      return targetForTypeSym(sym.owner).prepend(""+sym.name); // type param
+      return targetForTypeSym(sym.owner).plus(""+sym.name); // type param
     }
     else if (sym instanceof MethodSymbol) {
       Name mname = (sym.name == sym.name.table.names.init) ? sym.owner.name : sym.name;
-      return targetForTypeSym(sym.owner).prepend(""+mname+sym.type);
+      return targetForTypeSym(sym.owner).plus(""+mname+sym.type);
     } else {
       System.err.println("Unhandled type sym " + sym.getClass() + " '" + sym + "'");
-      return List.of(sym.name.toString());
+      return Id.ROOT.plus(sym.name.toString());
     }
   }
 
@@ -67,11 +68,11 @@ public class Utils {
   }
 
   public static class SigPrinter extends Pretty {
-    public SigPrinter (List<String> id, Name enclClassName) {
+    public SigPrinter (Id.Global id, Name enclClassName) {
       this(new StringWriter(), id, enclClassName);
     }
 
-    public SigPrinter (StringWriter out, List<String> id, Name enclClassName) {
+    public SigPrinter (StringWriter out, Id.Global id, Name enclClassName) {
       super(out, false);
       _out = out;
       _id = id;
@@ -92,7 +93,7 @@ public class Utils {
     }
 
     private final StringWriter _out;
-    private final List<String> _id;
+    private final Id.Global _id;
     private final Name _enclClassName;
     private List<DeferredWrite> _writes = List.nil();
     private boolean _nested = false;
@@ -191,7 +192,7 @@ public class Utils {
       // if we're generating the signature for a class, we need to append the type param name to id
       // to get our id, otherwise id is our id as is
       String name = tree.name.toString();
-      addSigDef((_enclClassName != null) ? _id.prepend(name) : _id, name, Kind.TYPE, tpos);
+      addSigDef((_enclClassName != null) ? _id.plus(name) : _id, name, Kind.TYPE, tpos);
     }
 
     @Override public void visitAnnotation (JCAnnotation tree) {
@@ -229,7 +230,7 @@ public class Utils {
         // we're either printing the sig for a plain old vardef, or we're nested, in which case we're
         // printing the signature for a method, but it has parameters, and 'id' is the method id, so
         // we need to append the var name to get the var def id
-        addSigDef(_nested ? _id.prepend(name) : _id, name, Kind.TERM, vpos);
+        addSigDef(_nested ? _id.plus(name) : _id, name, Kind.TERM, vpos);
       } catch (IOException ioe) {
         ioe.printStackTrace(System.err);
       }
@@ -243,11 +244,11 @@ public class Utils {
       super.visitIdent(tree);
     }
 
-    private void addSigDef (Collection<String> id, String name, Kind kind, int offset) {
+    private void addSigDef (Id.Global id, String name, Kind kind, int offset) {
       _writes = _writes.prepend(w -> w.emitSigDef(id, name, kind, offset));
     }
 
-    private void addSigUse (Collection<String> target, String name, Kind kind, int offset) {
+    private void addSigUse (Id.Global target, String name, Kind kind, int offset) {
       _writes = _writes.prepend(w -> w.emitSigUse(target, name, kind, offset));
     }
   }

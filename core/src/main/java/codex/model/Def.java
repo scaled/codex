@@ -7,16 +7,13 @@ package codex.model;
 /**
  * Represents the definition of a name somewhere in code.
  */
-public class Def implements Element {
+public final class Def implements Element {
 
-  /** The id of the project that contains this def. */
-  public final int projectId;
+  /** The unique id of this def. */
+  public final Id id;
 
-  /** A unique (within this def's project) identifier for this def. */
-  public final int id;
-
-  /** The id of the def that encloses this def, or zero if it unenclosed. */
-  public final int outerId;
+  /** The id of the def that encloses this def, or null if it unenclosed. */
+  public final Id outerId;
 
   /** The kind of the def. */
   public final Kind kind;
@@ -31,9 +28,7 @@ public class Def implements Element {
   /** The character offset in the source text at which this def occurs. */
   public final int offset;
 
-  public Def (int projectId, int id, int outerId, Kind kind, boolean exported,
-              String name, int offset) {
-    this.projectId = projectId;
+  public Def (Id id, Id outerId, Kind kind, boolean exported, String name, int offset) {
     this.id = id;
     this.outerId = outerId;
     this.kind = kind;
@@ -42,20 +37,22 @@ public class Def implements Element {
     this.offset = offset;
   }
 
-  @Override public int projectId () { return projectId; }
-  @Override public int id () { return id; }
+  /** Returns true if this def is structurally equal to {@code other}. */
+  public boolean equals (Def other) {
+    return (id.equals(other.id) && outerId.equals(other.outerId) && kind == other.kind &&
+            exported == other.exported && name.equals(other.name) && offset == other.offset);
+  }
+
+  @Override public Id id () { return id; }
   @Override public int offset () { return offset; }
   @Override public int length () { return name.length(); }
   @Override public Kind kind () { return kind; }
 
   @Override public int hashCode () {
-    return projectId ^ id;
+    return id.hashCode();
   }
 
   @Override public boolean equals (Object other) {
-    if (!(other instanceof Def)) return false;
-    Def o = (Def)other;
-    return (projectId == o.projectId && id == o.id && outerId == o.outerId && kind == o.kind &&
-            exported == o.exported && name.equals(o.name) && offset == o.offset);
+    return (other instanceof Def) && equals((Def)other);
   }
 }

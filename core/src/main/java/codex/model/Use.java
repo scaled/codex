@@ -7,13 +7,10 @@ package codex.model;
 /**
  * Represents the use of a name somewhere in code.
  */
-public class Use {
-
-  /** The id of the project that contains the referent. */
-  public final int refProjectId;
+public final class Use {
 
   /** The id of the referent. */
-  public final int refId;
+  public final Id refId;
 
   /** The kind of the referent. */
   public final Kind refKind;
@@ -26,22 +23,24 @@ public class Use {
 
   // TODO: track kind of use? read, write, invoke? are there others?
 
-  public Use (int refProjectId, int refId, Kind refKind, int offset, int length) {
-    this.refProjectId = refProjectId;
+  public Use (Id refId, Kind refKind, int offset, int length) {
     this.refId = refId;
     this.refKind = refKind;
     this.offset = offset;
     this.length = length;
   }
 
+  /** Returns true if this use is structually equal to {@code other}. */
+  public boolean equals (Use other) {
+    return (refId.equals(other.refId) && refKind == other.refKind &&
+            offset == other.offset && length == other.length);
+  }
+
   @Override public int hashCode () {
-    return refProjectId ^ refId ^ offset ^ length;
+    return refId.hashCode() ^ offset ^ length;
   }
 
   @Override public boolean equals (Object other) {
-    if (!(other instanceof Use)) return false;
-    Use o = (Use)other;
-    return (refProjectId == o.refProjectId && refId == o.refId && refKind == o.refKind &&
-            offset == o.offset && length == o.length);
+    return (other instanceof Use) && equals((Use)other);
   }
 }

@@ -47,13 +47,13 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     JCCompilationUnit unit = (JCCompilationUnit)node;
     _unit.push(unit);
     String pname = unit.packge.toString();
-    _id = _id.prepend(pname);
+    _id = _id.plus(pname);
     int offset = _text.indexOf(pname, unit.pos);
     writer.openDef(_id, pname, Kind.MODULE, Flavor.NONE, true, offset, 0, _text.length());
     writer.emitSig(pname);
     super.visitCompilationUnit(node, writer);
     writer.closeDef();
-    _id = _id.tail;
+    _id = _id.parent;
     _unit.pop();
     return null;
   }
@@ -84,7 +84,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
     int ocount = _anoncount;
     _anoncount = 0;
-    _id = _id.prepend(clid);
+    _id = _id.plus(clid);
 
     // we allow the name to be "" for anonymous classes so that they can be properly filtered
     // in the user interface; we eventually probably want to be more explicit about this
@@ -95,7 +95,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     Type t = tree.type;
     if (t != null) {
       Type st = _types.supertype(t);
-      List<String> stgt = targetForTypeSym(_types.erasure(st).tsym);
+      Id.Global stgt = targetForTypeSym(_types.erasure(st).tsym);
       writer.emitRelation(Relation.INHERITS, stgt);
       writer.emitRelation(Relation.SUPERTYPE, stgt);
       for (Type it : _types.interfaces(t)) writer.emitRelation(
@@ -122,7 +122,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
     _anoncount = ocount;
     writer.closeDef();
-    _id = _id.tail;
+    _id = _id.parent;
     _doc.pop();
     _symtab.pop();
     _class.pop();
@@ -150,7 +150,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
       // the id for a method includes signature information
       String methid = (tree.type == null) ? "" : tree.type.toString();
-      _id = _id.prepend(name + methid);
+      _id = _id.plus(name + methid);
 
       int treeStart = tree.getStartPosition();
       int offset = _text.indexOf(name, treeStart);
@@ -168,7 +168,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       super.visitMethod(node, writer);
 
       _doc.pop();
-      _id = _id.tail;
+      _id = _id.parent;
       _meth.pop();
       _symtab.pop();
     }
@@ -180,7 +180,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
     String name = node.getName().toString();
     int offset = tree.getStartPosition();
-    _id = _id.prepend(name);
+    _id = _id.plus(name);
     writer.openDef(_id, name, Kind.TYPE, Flavor.TYPE_PARAM, true,
                    offset, offset, offset + name.length());
 
@@ -197,7 +197,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     super.visitTypeParameter(node, writer);
 
     writer.closeDef();
-    _id = _id.tail;
+    _id = _id.parent;
     return null;
   }
 
@@ -218,7 +218,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     boolean isPub = isField && isPub(tree.mods.flags);
 
     String name = tree.name.toString();
-    _id = _id.prepend(name);
+    _id = _id.plus(name);
 
     int varend = tree.vartype.getEndPosition(_unit.peek().endPositions);
     int start = _text.indexOf(name, varend);
@@ -226,7 +226,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     int bodyStart = (treeStart == -1) ? start : treeStart;
 
     // add a symtab mapping for this vardef
-    if (tree.sym != null) _symtab.peek().put(tree.sym, List.from(_id));
+    if (tree.sym != null) _symtab.peek().put(tree.sym, _id);
 
     writer.openDef(_id, name, Kind.TERM, flavor, isPub, start,
                    bodyStart, tree.getEndPosition(_unit.peek().endPositions));
@@ -244,7 +244,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     if (!hasFlag(tree.mods, Flags.ENUM)) super.visitVariable(node, writer);
 
     writer.closeDef();
-    _id = _id.tail;
+    _id = _id.parent;
     return null;
   }
 
@@ -330,25 +330,25 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     return pp + path.getLeaf().getKind();
   }
 
-  private List<String> targetForSym (Name name, Symbol sym) {
+  private Id.Global targetForSym (Name name, Symbol sym) {
     return targetForSym(name.toString(), sym);
   }
 
-  private List<String> targetForSym (String name, Symbol sym) {
+  private Id.Global targetForSym (String name, Symbol sym) {
     if (sym instanceof VarSymbol) {
       VarSymbol vs = (VarSymbol)sym;
       switch (vs.getKind()) {
       case FIELD:
       case ENUM_CONSTANT:
-        return targetForSym("<error>", vs.owner).prepend(name);
+        return targetForSym("<error>", vs.owner).plus(name);
       // EXCEPTION_PARAMETER, PARAMETER, LOCAL_VARIABLE (all in symtab)
       default:
-        for (Map<VarSymbol,List<String>> symtab : _symtab) {
-          List<String> id = symtab.get(vs);
+        for (Map<VarSymbol,Id.Global> symtab : _symtab) {
+          Id.Global id = symtab.get(vs);
           if (id != null) return id;
         }
         System.err.println("targetForSym: unhandled varsym kind: " + vs.getKind());
-        return List.of("unknown");
+        return Id.ROOT.plus("unknown");
       }
     } else return targetForTypeSym(sym);
   }
@@ -423,7 +423,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
         case "linkplain":
           Symbol tsym = resolveLink(target);
           if (tsym != null) {
-            List<String> tid = targetForSym(target, tsym);
+            Id.Global tid = targetForSym(target, tsym);
             Kind tkind = kindForSym(tsym);
             uses = uses.prepend(w -> w.emitDocUse(tid, target, tkind, btm.start(2)));
           }
@@ -536,8 +536,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   private Deque<JCMethodDecl> _meth = new ArrayDeque<>();
   private Deque<DefDoc> _doc = new ArrayDeque<>();
 
-  private Deque<Map<VarSymbol,List<String>>> _symtab = new ArrayDeque<>();
-  private List<String> _id = List.nil();
+  private Deque<Map<VarSymbol,Id.Global>> _symtab = new ArrayDeque<>();
+  private Id.Global _id = Id.ROOT;
   private String _text;
 
   private final Types _types;
