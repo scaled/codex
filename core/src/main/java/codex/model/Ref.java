@@ -5,14 +5,16 @@
 package codex.model;
 
 /**
- * Uniquely identifies a def. This comes in two flavors: a local id, used within a project to
- * reference other defs in that same project, and a global id, used to reference defs in other
+ * Uniquely identifies a def. This comes in two flavors: a local ref, used within a project to
+ * reference other defs in that same project, and a global ref, used to reference defs in other
  * projects.
  */
-public abstract class Id {
+public abstract class Ref {
 
   /** Represents a def within the same project. */
-  public static final class Local extends Id {
+  public static final class Local extends Ref {
+
+    /** The integer id of the def in the project. */
     public final int id;
 
     @Override public int hashCode () {
@@ -33,7 +35,7 @@ public abstract class Id {
   }
 
   /** Represents a def in any project. */
-  public static final class Global extends Id {
+  public static final class Global extends Ref {
 
     /** The parent component of this id. */
     public final Global parent;
@@ -83,9 +85,9 @@ public abstract class Id {
   public static final Global ROOT = new Global(null, null);
 
   /** Returns a local id for {@code id}. */
-  public static Id local (int id) {
+  public static Ref local (int id) {
     return new Local(id);
   }
 
-  private Id () {} // prevent other subclasses
+  private Ref () {} // prevent other subclasses
 }

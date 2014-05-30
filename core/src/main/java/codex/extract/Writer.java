@@ -32,19 +32,19 @@ import java.util.Collection;
 public abstract class Writer {
 
   public abstract void openUnit (String path);
-  public abstract void openDef (Id.Global id, String name, Kind kind, Flavor flavor,
+  public abstract void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
                                 boolean exported, int offset, int bodyOffset, int bodyEnd);
 
-  public abstract void emitRelation (Relation relation, Id.Global target);
+  public abstract void emitRelation (Relation relation, Ref.Global target);
 
   public abstract void emitSig (String text);
-  public abstract void emitSigDef (Id.Global id, String name, Kind kind, int offset);
-  public abstract void emitSigUse (Id.Global target, String name, Kind kind, int offset);
+  public abstract void emitSigDef (Ref.Global id, String name, Kind kind, int offset);
+  public abstract void emitSigUse (Ref.Global target, String name, Kind kind, int offset);
 
   public abstract void emitDoc (int offset, int length);
-  public abstract void emitDocUse (Id.Global target, String name, Kind kind, int offset);
+  public abstract void emitDocUse (Ref.Global target, String name, Kind kind, int offset);
 
-  public abstract void emitUse (Id.Global target, String name, Kind kind, int offset);
+  public abstract void emitUse (Ref.Global target, String name, Kind kind, int offset);
 
   public abstract void closeDef ();
   public abstract void closeUnit ();

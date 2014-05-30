@@ -7,8 +7,8 @@ package codex.model;
 /** Provides information on a source code element. */
 public interface Element {
 
-  /** The id of this element or it's referent. */
-  Id id ();
+  /** A reference to this element or it's referent. */
+  Ref ref ();
 
   /** The offset into the source text at which this element occurs. */
   int offset ();
@@ -21,7 +21,7 @@ public interface Element {
 
   /** Returns true if this element and {@code other} refer to the same def. This could be two uses
     * of the same def, or a use and the def itself, etc. */
-  default boolean sameReferent (Element other) {
-    return id().equals(other.id());
+  default boolean sameRef (Element other) {
+    return ref().equals(other.ref());
   }
 }

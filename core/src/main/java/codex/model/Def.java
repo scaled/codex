@@ -9,11 +9,12 @@ package codex.model;
  */
 public final class Def implements Element {
 
-  /** The unique id of this def. */
-  public final Id id;
+  /** The unique (within the def's project) id of this def. */
+  public final int id;
 
-  /** The id of the def that encloses this def, or null if it unenclosed. */
-  public final Id outerId;
+  /** The id of the def that encloses this def, or 0 if it unenclosed. This will always be a another
+    * def in the same project. */
+  public final int outerId;
 
   /** The kind of the def. */
   public final Kind kind;
@@ -28,7 +29,7 @@ public final class Def implements Element {
   /** The character offset in the source text at which this def occurs. */
   public final int offset;
 
-  public Def (Id id, Id outerId, Kind kind, boolean exported, String name, int offset) {
+  public Def (int id, int outerId, Kind kind, boolean exported, String name, int offset) {
     this.id = id;
     this.outerId = outerId;
     this.kind = kind;
@@ -39,17 +40,17 @@ public final class Def implements Element {
 
   /** Returns true if this def is structurally equal to {@code other}. */
   public boolean equals (Def other) {
-    return (id.equals(other.id) && outerId.equals(other.outerId) && kind == other.kind &&
+    return (id == other.id && outerId == other.outerId && kind == other.kind &&
             exported == other.exported && name.equals(other.name) && offset == other.offset);
   }
 
-  @Override public Id id () { return id; }
+  @Override public Ref ref () { return Ref.local(id); }
   @Override public int offset () { return offset; }
   @Override public int length () { return name.length(); }
   @Override public Kind kind () { return kind; }
 
   @Override public int hashCode () {
-    return id.hashCode();
+    return id ^ outerId;
   }
 
   @Override public boolean equals (Object other) {

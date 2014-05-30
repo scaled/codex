@@ -95,7 +95,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     Type t = tree.type;
     if (t != null) {
       Type st = _types.supertype(t);
-      Id.Global stgt = targetForTypeSym(_types.erasure(st).tsym);
+      Ref.Global stgt = targetForTypeSym(_types.erasure(st).tsym);
       writer.emitRelation(Relation.INHERITS, stgt);
       writer.emitRelation(Relation.SUPERTYPE, stgt);
       for (Type it : _types.interfaces(t)) writer.emitRelation(
@@ -330,11 +330,11 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     return pp + path.getLeaf().getKind();
   }
 
-  private Id.Global targetForSym (Name name, Symbol sym) {
+  private Ref.Global targetForSym (Name name, Symbol sym) {
     return targetForSym(name.toString(), sym);
   }
 
-  private Id.Global targetForSym (String name, Symbol sym) {
+  private Ref.Global targetForSym (String name, Symbol sym) {
     if (sym instanceof VarSymbol) {
       VarSymbol vs = (VarSymbol)sym;
       switch (vs.getKind()) {
@@ -343,12 +343,12 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
         return targetForSym("<error>", vs.owner).plus(name);
       // EXCEPTION_PARAMETER, PARAMETER, LOCAL_VARIABLE (all in symtab)
       default:
-        for (Map<VarSymbol,Id.Global> symtab : _symtab) {
-          Id.Global id = symtab.get(vs);
+        for (Map<VarSymbol,Ref.Global> symtab : _symtab) {
+          Ref.Global id = symtab.get(vs);
           if (id != null) return id;
         }
         System.err.println("targetForSym: unhandled varsym kind: " + vs.getKind());
-        return Id.ROOT.plus("unknown");
+        return Ref.ROOT.plus("unknown");
       }
     } else return targetForTypeSym(sym);
   }
@@ -423,7 +423,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
         case "linkplain":
           Symbol tsym = resolveLink(target);
           if (tsym != null) {
-            Id.Global tid = targetForSym(target, tsym);
+            Ref.Global tid = targetForSym(target, tsym);
             Kind tkind = kindForSym(tsym);
             uses = uses.prepend(w -> w.emitDocUse(tid, target, tkind, btm.start(2)));
           }
@@ -536,8 +536,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   private Deque<JCMethodDecl> _meth = new ArrayDeque<>();
   private Deque<DefDoc> _doc = new ArrayDeque<>();
 
-  private Deque<Map<VarSymbol,Id.Global>> _symtab = new ArrayDeque<>();
-  private Id.Global _id = Id.ROOT;
+  private Deque<Map<VarSymbol,Ref.Global>> _symtab = new ArrayDeque<>();
+  private Ref.Global _id = Ref.ROOT;
   private String _text;
 
   private final Types _types;

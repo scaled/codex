@@ -22,7 +22,7 @@ public class TextWriter extends Writer {
     _indent += 1;
   }
 
-  @Override public void openDef (Id.Global id, String name, Kind kind, Flavor flavor,
+  @Override public void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
                                  boolean exported, int offset, int bodyStart, int bodyEnd) {
     emit("def", id);
     emit("name", name);
@@ -34,20 +34,20 @@ public class TextWriter extends Writer {
     _indent += 1;
   }
 
-  @Override public void emitRelation (Relation relation, Id.Global target) {
+  @Override public void emitRelation (Relation relation, Ref.Global target) {
     emit("relation", relation, target);
   }
 
   @Override public void emitSig (String text) {
     emit("sig", text.replace('\n', '\t')); // TODO: undo this on in TextReader
   }
-  @Override public void emitSigDef (Id.Global id, String name, Kind kind, int offset) {
+  @Override public void emitSigDef (Ref.Global id, String name, Kind kind, int offset) {
     emit("sigdef", "id", id);
     emit("sigdef", "name", name);
     emit("sigdef", "kind", kind);
     emit("sigdef", "offset", offset);
   }
-  @Override public void emitSigUse (Id.Global target, String name, Kind kind, int offset) {
+  @Override public void emitSigUse (Ref.Global target, String name, Kind kind, int offset) {
     emit("siguse", "target", target);
     emit("siguse", "name", name);
     emit("siguse", "kind", kind);
@@ -58,14 +58,14 @@ public class TextWriter extends Writer {
     emit("doc", "offset", offset);
     emit("doc", "length", length);
   }
-  @Override public void emitDocUse (Id.Global target, String name, Kind kind, int offset) {
+  @Override public void emitDocUse (Ref.Global target, String name, Kind kind, int offset) {
     emit("docuse", "target", target);
     emit("docuse", "name", name);
     emit("docuse", "kind", kind);
     emit("docuse", "offset", offset);
   }
 
-  @Override public void emitUse (Id.Global target, String name, Kind kind, int offset) {
+  @Override public void emitUse (Ref.Global target, String name, Kind kind, int offset) {
     emit("use", "target", target);
     emit("use", "name", name);
     emit("use", "kind", kind);

@@ -9,8 +9,8 @@ package codex.model;
  */
 public final class Use {
 
-  /** The id of the referent. */
-  public final Id refId;
+  /** Identifies the referent. This may be a local or global ref. */
+  public final Ref ref;
 
   /** The kind of the referent. */
   public final Kind refKind;
@@ -21,10 +21,10 @@ public final class Use {
   /** The length (in characters) of the use string. */
   public final int length;
 
-  // TODO: track kind of use? read, write, invoke? are there others?
+  // TODO: track kind of use: read, write, invoke, etc.?
 
-  public Use (Id refId, Kind refKind, int offset, int length) {
-    this.refId = refId;
+  public Use (Ref ref, Kind refKind, int offset, int length) {
+    this.ref = ref;
     this.refKind = refKind;
     this.offset = offset;
     this.length = length;
@@ -32,12 +32,12 @@ public final class Use {
 
   /** Returns true if this use is structually equal to {@code other}. */
   public boolean equals (Use other) {
-    return (refId.equals(other.refId) && refKind == other.refKind &&
+    return (ref.equals(other.ref) && refKind == other.refKind &&
             offset == other.offset && length == other.length);
   }
 
   @Override public int hashCode () {
-    return refId.hashCode() ^ offset ^ length;
+    return ref.hashCode() ^ refKind.hashCode() ^ offset ^ length;
   }
 
   @Override public boolean equals (Object other) {

@@ -4,7 +4,7 @@
 
 package codex.extract;
 
-import codex.model.Id;
+import codex.model.Ref;
 import codex.model.Kind;
 import com.google.common.collect.Sets;
 import com.sun.tools.javac.code.Flags;
@@ -35,9 +35,9 @@ public class Utils {
 
   // note the more general targetForSym in the tree traverser which can handle local names; this
   // can only handle type names, which is fine for handling targets in docs and signatures
-  public static Id.Global targetForTypeSym (Symbol sym) {
+  public static Ref.Global targetForTypeSym (Symbol sym) {
     if (sym == null) {
-      return Id.ROOT; // the "root" type's owner; nothing to see here, move it along
+      return Ref.ROOT; // the "root" type's owner; nothing to see here, move it along
     }
     else if (sym instanceof ClassSymbol) {
       ClassSymbol csym = (ClassSymbol)sym;
@@ -45,7 +45,7 @@ public class Utils {
       return targetForTypeSym(sym.owner).plus(sym.name.toString());
     }
     else if (sym instanceof PackageSymbol) {
-      return Id.ROOT.plus(sym.toString()); // keep the dots between packages
+      return Ref.ROOT.plus(sym.toString()); // keep the dots between packages
     }
     else if (sym instanceof TypeSymbol) {
       return targetForTypeSym(sym.owner).plus(""+sym.name); // type param
@@ -55,7 +55,7 @@ public class Utils {
       return targetForTypeSym(sym.owner).plus(""+mname+sym.type);
     } else {
       System.err.println("Unhandled type sym " + sym.getClass() + " '" + sym + "'");
-      return Id.ROOT.plus(sym.name.toString());
+      return Ref.ROOT.plus(sym.name.toString());
     }
   }
 
@@ -68,11 +68,11 @@ public class Utils {
   }
 
   public static class SigPrinter extends Pretty {
-    public SigPrinter (Id.Global id, Name enclClassName) {
+    public SigPrinter (Ref.Global id, Name enclClassName) {
       this(new StringWriter(), id, enclClassName);
     }
 
-    public SigPrinter (StringWriter out, Id.Global id, Name enclClassName) {
+    public SigPrinter (StringWriter out, Ref.Global id, Name enclClassName) {
       super(out, false);
       _out = out;
       _id = id;
@@ -93,7 +93,7 @@ public class Utils {
     }
 
     private final StringWriter _out;
-    private final Id.Global _id;
+    private final Ref.Global _id;
     private final Name _enclClassName;
     private List<DeferredWrite> _writes = List.nil();
     private boolean _nested = false;
@@ -244,11 +244,11 @@ public class Utils {
       super.visitIdent(tree);
     }
 
-    private void addSigDef (Id.Global id, String name, Kind kind, int offset) {
+    private void addSigDef (Ref.Global id, String name, Kind kind, int offset) {
       _writes = _writes.prepend(w -> w.emitSigDef(id, name, kind, offset));
     }
 
-    private void addSigUse (Id.Global target, String name, Kind kind, int offset) {
+    private void addSigUse (Ref.Global target, String name, Kind kind, int offset) {
       _writes = _writes.prepend(w -> w.emitSigUse(target, name, kind, offset));
     }
   }
