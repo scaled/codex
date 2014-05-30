@@ -64,8 +64,8 @@ public abstract class Ref {
 
     private void toString (StringBuilder sb) {
       if (parent != ROOT) {
-        sb.append(" ");
         parent.toString(sb);
+        sb.append(" ");
       }
       sb.append(id);
     }
@@ -77,7 +77,7 @@ public abstract class Ref {
 
     private Global (Global parent, String id) {
       this.parent = parent;
-      this.id = id.intern();
+      this.id = (id == null) ? null : id.intern();
     }
   }
 
