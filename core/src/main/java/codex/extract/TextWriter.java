@@ -17,8 +17,8 @@ public class TextWriter extends Writer {
     _out = out;
   }
 
-  @Override public void openUnit (String path) {
-    emit("unit", path);
+  @Override public void openUnit (Source source) {
+    emit("unit", source);
     _indent += 1;
   }
 

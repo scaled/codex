@@ -19,5 +19,12 @@
       <artifactId>guava</artifactId>
       <version>16.0.1</version>
     </dependency>
+
+    <!-- TODO: move this to memory submodule? -->
+    <dependency>
+      <groupId>com.carrotsearch</groupId>
+      <artifactId>hppc</artifactId>
+      <version>0.6.0</version>
+    </dependency>
   </dependencies>
 </project>

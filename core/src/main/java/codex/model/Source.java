@@ -26,6 +26,10 @@ public abstract class Source {
     @Override public int hashCode () {
       return path.hashCode();
     }
+
+    @Override public String toString () {
+      return path;
+    }
   }
 
   /** Models a source file inside an archive file (zip, jar, etc.). */
@@ -51,6 +55,20 @@ public abstract class Source {
     @Override public int hashCode () {
       return archivePath.hashCode() ^ sourcePath.hashCode();
     }
+
+    @Override public String toString () {
+      return archivePath + "!" + sourcePath;
+    }
+  }
+
+  /**
+   * Creates a source from the supplied string representation. {@code string} should be the result
+   * of calling {@link Source#toString} on an existing source.
+   */
+  public static Source fromString (String string) {
+    int eidx = string.indexOf('!');
+    if (eidx == -1) return new File(string);
+    else return new ArchiveEntry(string.substring(0, eidx), string.substring(eidx+1));
   }
 
   private Source () {} // seal it!

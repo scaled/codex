@@ -1,0 +1,171 @@
+//
+// Codex - a framework for grokking code
+// http://github.com/scaled/codex/blob/master/LICENSE
+
+package codex.store;
+
+import codex.extract.StoreWriter;
+import codex.extract.Writer;
+import codex.model.*;
+import com.carrotsearch.hppc.IntObjectMap;
+import com.carrotsearch.hppc.IntObjectOpenHashMap;
+import com.carrotsearch.hppc.IntOpenHashSet;
+import com.carrotsearch.hppc.IntSet;
+import com.carrotsearch.hppc.cursors.IntCursor;
+import com.google.common.collect.Iterables;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
+/**
+ * A completely in-memory store.
+ */
+public class EphemeralStore extends ProjectStore {
+
+  /** A writer that can be used to write metadata to this store. Handles incremental updates. */
+  public final Writer writer = new StoreWriter() {
+
+    @Override public void closeUnit () {
+      super.closeUnit();
+      // purge any old def ids from this unit
+      if (!_oldDefIds.isEmpty()) removeDefs(_oldDefIds);
+      _curIdMap = null;
+      _oldDefIds = null;
+    }
+
+    @Override protected int assignUnitId (Source source) {
+      IdMap idMap = _unitIdMap.get(source);
+      if (idMap != null) {
+        _curIdMap = idMap;
+        _oldDefIds = idMap.copyIds();
+        return idMap.unitId;
+      } else {
+        int unitId = _unitSource.size()+1;
+        _unitSource.put(unitId, source);
+        _unitIdMap.put(source, _curIdMap = new IdMap(_projectRefs, unitId));
+        _oldDefIds = new IntOpenHashSet();
+        return unitId;
+      }
+    }
+
+    @Override protected int resolveDefId (Ref.Global id) {
+      return _curIdMap.resolve(id);
+    }
+
+    @Override protected void storeDef (Def def) {
+      _defs.put(def.id, def);
+      if (def.outerId != 0) {
+        List<Def> members = _defMembers.get(def.outerId);
+        if (members == null) _defMembers.put(def.outerId, members = new ArrayList<>());
+        members.add(def);
+      } else {
+        _topDefs.put(def.id, def);
+      }
+    }
+
+    @Override protected void storeUse (int defId, Use use) {
+      List<Use> uses = _defUses.get(defId);
+      if (uses == null) _defUses.put(defId, uses = new ArrayList<>());
+      uses.add(use);
+    }
+
+    @Override protected void storeSig (int defId, Sig sig) {
+      _defSig.put(defId, sig);
+    }
+
+    @Override protected void storeDoc (int defId, Doc doc) {
+      _defDoc.put(defId, doc);
+    }
+
+    private IdMap _curIdMap;
+    private IntSet _oldDefIds;
+  };
+
+  public EphemeralStore (int projectId) {
+    super(projectId);
+  }
+
+  /**
+   * Wipes the contents of this store, preparing it to be rebuild from scratch.
+   */
+  public void clear () {
+    _unitSource.clear();
+    _unitIdMap.clear();
+    _topDefs.clear();
+    _defs.clear();
+    _defMembers.clear();
+    _defUses.clear();
+    _defSig.clear();
+    _defDoc.clear();
+  }
+
+  @Override public Iterable<Def> topLevelDefs () {
+    return _topDefs.values();
+  }
+
+  @Override public Iterable<Def> sourceDefs (Source source) {
+    IdMap idMap = _unitIdMap.get(source);
+    if (idMap == null) throw new IllegalArgumentException("Unknown source " + source);
+    // TODO: copying the ids here is kinda expensive, come up with another approach? maybe not, any
+    // other approach would likely result in materializing a list to hold the defs, which is pretty
+    // much just as expensive...
+    return Iterables.transform(idMap.copyIds(), ic -> def(ic.value));
+  }
+
+  @Override public Def def (int defId) {
+    return reqdef(defId, _defs.get(defId));
+  }
+
+  @Override public List<Def> memberDefs (int defId) {
+    List<Def> members = _defMembers.get(defId);
+    return (members == null) ? Collections.emptyList() : members;
+  }
+
+  @Override public List<Use> uses (int defId) {
+    List<Use> uses = _defUses.get(defId);
+    return (uses == null) ? Collections.emptyList() : uses;
+  }
+
+  @Override public Optional<Sig> sig (int defId) {
+    return Optional.ofNullable(_defSig.get(defId));
+  }
+
+  @Override public Optional<Doc> doc (int defId) {
+    return Optional.ofNullable(_defDoc.get(defId));
+  }
+
+  @Override public Source source (int defId) {
+    return reqdef(defId, _unitSource.get(IdMap.toUnitId(defId)));
+  }
+
+  @Override public void close () {} // noop!
+
+  private void removeDefs (IntSet defIds) {
+    _projectRefs.remove(defIds);
+    for (IntCursor ic : defIds) _topDefs.remove(ic.value);
+    _defs.removeAll(defIds);
+    _defMembers.removeAll(defIds);
+    _defUses.removeAll(defIds);
+    _defSig.removeAll(defIds);
+    _defDoc.removeAll(defIds);
+  }
+
+  private <T> T reqdef (int defId, T value) {
+    if (value == null) throw new NoSuchElementException("No def with id " + defId);
+    return value;
+  }
+
+  private final RefTree _projectRefs = new RefTree();
+  private final IntObjectMap<Source> _unitSource = new IntObjectOpenHashMap<>();
+  private final Map<Source,IdMap> _unitIdMap = new HashMap<>();
+  private final Map<Integer,Def> _topDefs = new HashMap<>();
+  private final IntObjectMap<Def> _defs = new IntObjectOpenHashMap<>();
+  private final IntObjectMap<List<Def>> _defMembers = new IntObjectOpenHashMap<>();
+  private final IntObjectMap<List<Use>> _defUses = new IntObjectOpenHashMap<>();
+  private final IntObjectMap<Sig> _defSig = new IntObjectOpenHashMap<>();
+  private final IntObjectMap<Doc> _defDoc = new IntObjectOpenHashMap<>();
+}

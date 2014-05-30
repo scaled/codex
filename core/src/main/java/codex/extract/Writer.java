@@ -5,7 +5,6 @@
 package codex.extract;
 
 import codex.model.*;
-import java.util.Collection;
 
 /**
  * Provides an API via which compilers or other code analyzers can emit Codex model data while
@@ -31,7 +30,8 @@ import java.util.Collection;
  */
 public abstract class Writer {
 
-  public abstract void openUnit (Source path);
+  public abstract void openUnit (Source source);
+
   public abstract void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
                                 boolean exported, int offset, int bodyOffset, int bodyEnd);
 
