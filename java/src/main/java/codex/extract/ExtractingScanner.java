@@ -348,7 +348,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
           if (id != null) return id;
         }
         System.err.println("targetForSym: unhandled varsym kind: " + vs.getKind());
-        return Ref.ROOT.plus("unknown");
+        return Ref.Global.ROOT.plus("unknown");
       }
     } else return targetForTypeSym(sym);
   }
@@ -537,7 +537,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   private Deque<DefDoc> _doc = new ArrayDeque<>();
 
   private Deque<Map<VarSymbol,Ref.Global>> _symtab = new ArrayDeque<>();
-  private Ref.Global _id = Ref.ROOT;
+  private Ref.Global _id = Ref.Global.ROOT;
   private String _text;
 
   private final Types _types;

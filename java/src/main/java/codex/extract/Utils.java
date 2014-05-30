@@ -37,7 +37,7 @@ public class Utils {
   // can only handle type names, which is fine for handling targets in docs and signatures
   public static Ref.Global targetForTypeSym (Symbol sym) {
     if (sym == null) {
-      return Ref.ROOT; // the "root" type's owner; nothing to see here, move it along
+      return Ref.Global.ROOT; // the "root" type's owner; nothing to see here, move it along
     }
     else if (sym instanceof ClassSymbol) {
       ClassSymbol csym = (ClassSymbol)sym;
@@ -45,7 +45,7 @@ public class Utils {
       return targetForTypeSym(sym.owner).plus(sym.name.toString());
     }
     else if (sym instanceof PackageSymbol) {
-      return Ref.ROOT.plus(sym.toString()); // keep the dots between packages
+      return Ref.Global.ROOT.plus(sym.toString()); // keep the dots between packages
     }
     else if (sym instanceof TypeSymbol) {
       return targetForTypeSym(sym.owner).plus(""+sym.name); // type param
@@ -55,7 +55,7 @@ public class Utils {
       return targetForTypeSym(sym.owner).plus(""+mname+sym.type);
     } else {
       System.err.println("Unhandled type sym " + sym.getClass() + " '" + sym + "'");
-      return Ref.ROOT.plus(sym.name.toString());
+      return Ref.Global.ROOT.plus(sym.name.toString());
     }
   }
 
