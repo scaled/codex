@@ -53,6 +53,11 @@ public class Utils {
     else if (sym instanceof MethodSymbol) {
       Name mname = (sym.name == sym.name.table.names.init) ? sym.owner.name : sym.name;
       return targetForTypeSym(sym.owner).plus(""+mname+sym.type);
+    }
+    else if (sym instanceof VarSymbol) {
+      // we can encounter a var symbol when our chain of parents exits an anonymous class and rises
+      // up into the field or variable to which the class was assigned
+      return targetForTypeSym(sym.owner).plus(sym.name.toString());
     } else {
       System.err.println("Unhandled type sym " + sym.getClass() + " '" + sym + "'");
       return Ref.Global.ROOT.plus(sym.name.toString());
