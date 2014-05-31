@@ -20,6 +20,8 @@ import codex.model.*;
  *     emitDoc?
  *       emitDocUse*
  *     emitUse*
+ *     commitDef
+ *     [openDef..closeDef]*
  *   closeDef]*
  * closeUnit]*
  * }</pre>
@@ -46,6 +48,7 @@ public abstract class Writer {
 
   public abstract void emitUse (Ref.Global target, String name, Kind kind, int offset);
 
+  public abstract void commitDef ();
   public abstract void closeDef ();
   public abstract void closeUnit ();
 }

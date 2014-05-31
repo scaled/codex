@@ -56,4 +56,8 @@ public final class Def implements Element {
   @Override public boolean equals (Object other) {
     return (other instanceof Def) && equals((Def)other);
   }
+
+  @Override public String toString () {
+    return String.format("Def(%d, %d, %s, %s, %s, %d)", id, outerId, kind, exported, name, offset);
+  }
 }

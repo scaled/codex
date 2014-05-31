@@ -51,6 +51,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     int offset = _text.indexOf(pname, unit.pos);
     writer.openDef(_id, pname, Kind.MODULE, Flavor.NONE, true, offset, 0, _text.length());
     writer.emitSig(pname);
+    writer.commitDef();
     super.visitCompilationUnit(node, writer);
     writer.closeDef();
     _id = _id.parent;
@@ -118,10 +119,11 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // emit docs
     _doc.push(findDoc(treeStart).emit(writer));
 
+    writer.commitDef();
     super.visitClass(node, writer);
+    writer.closeDef();
 
     _anoncount = ocount;
-    writer.closeDef();
     _id = _id.parent;
     _doc.pop();
     _symtab.pop();
@@ -164,8 +166,11 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       DefDoc doc = findDoc(treeStart);
       doc.emit(writer);
       _doc.push(doc);
+      writer.commitDef();
 
+      writer.commitDef();
       super.visitMethod(node, writer);
+      writer.closeDef();
 
       _doc.pop();
       _id = _id.parent;
@@ -194,9 +199,10 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     DefDoc curdoc = _doc.peek();
     if (curdoc != null) curdoc.emitParam("<" + name + ">", writer);
 
+    writer.commitDef();
     super.visitTypeParameter(node, writer);
-
     writer.closeDef();
+
     _id = _id.parent;
     return null;
   }
@@ -239,11 +245,12 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // otherwise try to extract its documentation from the method javadoc
     else if (isParam) _doc.peek().emitParam(name, writer);
 
+    writer.commitDef();
     // if this is an enum field, don't call super visit as that will visit a bunch of synthetic
     // mishmash which we don't want to emit defs for
     if (!hasFlag(tree.mods, Flags.ENUM)) super.visitVariable(node, writer);
-
     writer.closeDef();
+
     _id = _id.parent;
     return null;
   }

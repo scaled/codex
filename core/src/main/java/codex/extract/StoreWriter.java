@@ -54,8 +54,8 @@ public abstract class StoreWriter extends Writer {
     storeUse(_defIdStack.peek(), new Use(target, kind, offset, name.length()));
   }
 
-  @Override public void closeDef () {
-    int defId = _defIdStack.pop();
+  @Override public void commitDef () {
+    int defId = _defIdStack.peek();
     if (_curSig != null) {
       storeSig(defId, _curSig);
       _curSig = null;
@@ -64,6 +64,10 @@ public abstract class StoreWriter extends Writer {
       storeDoc(defId, _curDoc);
       _curDoc = null;
     }
+  }
+
+  @Override public void closeDef () {
+    _defIdStack.pop();
   }
   @Override public void closeUnit () {
     // TODO: track def ids in this unit, emit all at once
