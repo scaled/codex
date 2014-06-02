@@ -42,7 +42,7 @@ public class LDBProjectStore extends ProjectStore {
   public static final byte DEFID_TO_DOC = 9;
 
   /** A writer that can be used to write metadata to this store. Handles incremental updates. */
-  public Writer writer = new StoreWriter() {
+  public Writer writer = new StoreWriter(projectId) {
 
     @Override protected int assignUnitId (Source source) {
       return 0; // TODO
@@ -101,6 +101,10 @@ public class LDBProjectStore extends ProjectStore {
 
   @Override public Iterable<Def> topLevelDefs () {
     return null; // TODO
+  }
+
+  @Override public boolean isIndexed (Source source) {
+    return false; // TODO
   }
 
   @Override public Iterable<Def> sourceDefs (Source source) {

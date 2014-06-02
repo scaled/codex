@@ -33,8 +33,9 @@ public class Inflater extends Flater {
   }
 
   public Def getDef () {
-    return new Def(getInt() /*id*/, getInt() /*outerId*/, Kind.valueOf(getString()),
-                   getBoolean() /*exported*/, getString() /*name*/, getInt() /*offset*/);
+    return new Def(getInt() /*projectId*/, getInt() /*defId*/, getInt() /*outerId*/,
+                   Kind.valueOf(getString()), getBoolean() /*exported*/,
+                   getString() /*name*/, getInt() /*offset*/);
   }
 
   public List<Def> getDefs () {
@@ -46,7 +47,7 @@ public class Inflater extends Flater {
 
   public Ref getRef () {
     boolean local = getBoolean();
-    if (local) return Ref.local(getInt());
+    if (local) return Ref.local(getInt() /*projectId*/, getInt() /*defId*/);
     else return Ref.Global.fromString(getString());
   }
 
