@@ -108,5 +108,12 @@ public abstract class Ref {
     return new Local(projectId, defId);
   }
 
+  /** Returns a global ref for the specified (outer- to inner-most) name path. */
+  public static Ref global (String... names) {
+    Ref.Global ref = Ref.Global.ROOT;
+    for (String name : names) ref = ref.plus(name);
+    return ref;
+  }
+
   private Ref () {} // prevent other subclasses
 }
