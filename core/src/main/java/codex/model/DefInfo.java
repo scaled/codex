@@ -29,4 +29,8 @@ public class DefInfo {
     this.sig = sig;
     this.doc = doc;
   }
+
+  @Override public String toString () {
+    return def + " @ " + source;
+  }
 }

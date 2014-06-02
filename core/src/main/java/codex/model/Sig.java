@@ -27,4 +27,8 @@ public class Sig {
     this.defs = defs;
     this.uses = uses;
   }
+
+  @Override public String toString () {
+    return text;
+  }
 }

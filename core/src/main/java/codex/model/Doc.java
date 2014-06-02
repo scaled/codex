@@ -26,4 +26,8 @@ public class Doc {
     this.length = length;
     this.uses = uses;
   }
+
+  @Override public String toString () {
+    return String.format("[%d, %d)", offset, length);
+  }
 }
