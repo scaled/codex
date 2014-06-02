@@ -45,6 +45,12 @@ public abstract class ProjectStore implements AutoCloseable {
   public abstract Def def (int defId);
 
   /**
+   * Returns a global ref for {@code defId}.
+   * @throws NoSuchElementException if no def exists with that id.
+   */
+  public abstract Ref.Global ref (int defId);
+
+  /**
    * Returns all defs nested immediately inside {@code defId}. This does not return defs nested two
    * or more levels deep.
    * @throws NoSuchElementException if no def exists with that id.

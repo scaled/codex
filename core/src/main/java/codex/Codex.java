@@ -96,6 +96,14 @@ public class Codex {
     return ostore.isPresent();
   }
 
+  // TODO
+  // /** Finds all defs matching the following criteria:
+  //   *  - kind is in `kinds`
+  //   *  - name equals `name` (if `prefix` is false) or
+  //   *  - name starts with `name` (if `prefix` is true)
+  //   * Name comparison is done case-insensitively. */
+  // def find (kinds :Set[Kind], name :String, prefix :Boolean) :Seq[Def]
+
   protected DefInfo resolve (ProjectStore store, Def def) {
     return new DefInfo(def, store.source(def.id), store.sig(def.id), store.doc(def.id));
   }

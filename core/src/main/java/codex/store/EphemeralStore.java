@@ -126,6 +126,10 @@ public class EphemeralStore extends ProjectStore {
     return (id == 0) ? Optional.empty() : Optional.ofNullable(_defs.get(id));
   }
 
+  @Override public Ref.Global ref (int defId) {
+    return _projectRefs.get(defId);
+  }
+
   @Override public Def def (int defId) {
     return reqdef(defId, _defs.get(defId));
   }

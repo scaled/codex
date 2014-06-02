@@ -12,6 +12,7 @@ import com.carrotsearch.hppc.IntSet;
 import com.carrotsearch.hppc.cursors.IntCursor;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * Maintains a mapping from {@link Ref.Global} to an integer identifier. The refs are stored in a
@@ -26,6 +27,17 @@ public class RefTree {
   public synchronized int get (Ref.Global ref) {
     Node node = getNode(ref);
     return (node == null) ? 0 : node.id;
+  }
+
+  /**
+   * Returns the global ref for {@code defId}.
+   * @throws NoSuchElementException if no def exists with that id.
+   */
+  public synchronized Ref.Global get (int defId) {
+    Node node = _byId.get(defId);
+    if (node == null) throw new NoSuchElementException("No def with id " + defId);
+    if (node.ref == null) throw new IllegalStateException("Def node lacks ref " + defId);
+    return node.ref;
   }
 
   /**

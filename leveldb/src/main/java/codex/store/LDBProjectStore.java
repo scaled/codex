@@ -119,6 +119,10 @@ public class LDBProjectStore extends ProjectStore {
     return reqById(DEFID_TO_DEF, defId).getDef();
   }
 
+  @Override public Ref.Global ref (int defId) {
+    return null; // TODO
+  }
+
   @Override public List<Def> memberDefs (int defId) {
     Inflater data = getById(DEFID_TO_MEMDEFS, defId);
     if (data == null) return Collections.emptyList();
