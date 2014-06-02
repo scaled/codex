@@ -47,7 +47,7 @@ public class Codex {
   public static class Query {
     /** The set of kinds to consider. */
     public final Set<Kind> kinds;
-    /** The name, or name prefix, to be matched. */
+    /** The name, or name prefix, to be matched. This is always lowercase. */
     public final String name;
     /** Whether {@link #name} is exact or a prefix. */
     public final boolean prefix;
@@ -74,7 +74,7 @@ public class Codex {
 
     private Query (Set<Kind> kinds, String name, boolean prefix, Locality locality) {
       this.kinds = kinds;
-      this.name = name;
+      this.name = name.toLowerCase();
       this.prefix = prefix;
       this.locality = locality;
     }

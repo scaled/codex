@@ -169,16 +169,16 @@ public class EphemeralStore extends ProjectStore {
   }
 
   @Override public void find (Codex.Query query, boolean expOnly, List<Def> into) {
-    String lname = query.name.toLowerCase();
     for (Kind kind : query.kinds) {
       TreeMultimap<String,Def> index = _indices.get(kind);
-      // if we're doing an exact match, just look up lname directly
-      if (!query.prefix) add(index.get(lname), expOnly, into);
+      // if we're doing an exact match, just look up name directly
+      if (!query.prefix) add(index.get(query.name), expOnly, into);
       else {
         // if we're doing a prefix match, iterate over the index starting from the first key that's
-        // >= lname, and stop when we reach a key that no longer starts with our prefix
-        for (Map.Entry<String,Collection<Def>> entry : index.asMap().tailMap(lname).entrySet()) {
-          if (!entry.getKey().startsWith(lname)) break;
+        // >= name, and stop when we reach a key that no longer starts with our prefix
+        String pre = query.name;
+        for (Map.Entry<String,Collection<Def>> entry : index.asMap().tailMap(pre).entrySet()) {
+          if (!entry.getKey().startsWith(pre)) break;
           add(entry.getValue(), expOnly, into);
         }
       }
