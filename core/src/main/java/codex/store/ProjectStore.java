@@ -8,6 +8,7 @@ import codex.model.*;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 /**
  * Contains metadata for a single project.
@@ -23,7 +24,12 @@ public abstract class ProjectStore implements AutoCloseable {
   public abstract Iterable<Def> topLevelDefs ();
 
   /**
-   * Returns the list of all top-level defs in the specified source file.
+   * Returns true if {@code source} is indexed by this project, false otherwise.
+   */
+  public abstract boolean isIndexed (Source source);
+
+  /**
+   * Returns the list of all defs in the specified source file.
    */
   public abstract Iterable<Def> sourceDefs (Source source);
 

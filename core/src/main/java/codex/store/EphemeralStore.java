@@ -27,7 +27,7 @@ import java.util.Optional;
 public class EphemeralStore extends ProjectStore {
 
   /** A writer that can be used to write metadata to this store. Handles incremental updates. */
-  public final Writer writer = new StoreWriter() {
+  public final Writer writer = new StoreWriter(projectId) {
 
     @Override public void closeUnit () {
       super.closeUnit();
@@ -105,6 +105,10 @@ public class EphemeralStore extends ProjectStore {
 
   @Override public Iterable<Def> topLevelDefs () {
     return _topDefs.values();
+  }
+
+  @Override public boolean isIndexed (Source source) {
+    return _unitIdMap.containsKey(source);
   }
 
   @Override public Iterable<Def> sourceDefs (Source source) {
