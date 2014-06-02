@@ -4,6 +4,7 @@
 
 package codex.store;
 
+import codex.Codex;
 import codex.extract.StoreWriter;
 import codex.extract.Writer;
 import codex.model.*;
@@ -13,13 +14,16 @@ import com.carrotsearch.hppc.IntOpenHashSet;
 import com.carrotsearch.hppc.IntSet;
 import com.carrotsearch.hppc.cursors.IntCursor;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.TreeMultimap;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * A completely in-memory store.
@@ -65,6 +69,7 @@ public class EphemeralStore extends ProjectStore {
       } else {
         _topDefs.put(def.id, def);
       }
+      _indices.get(def.kind).put(def.name.toLowerCase(), def);
     }
 
     @Override protected void storeUse (int defId, Use use) {
@@ -101,6 +106,13 @@ public class EphemeralStore extends ProjectStore {
     _defUses.clear();
     _defSig.clear();
     _defDoc.clear();
+  }
+
+  /**
+   * Returns the number of defs in this store.
+   */
+  public int defCount () {
+    return _projectRefs.size();
   }
 
   @Override public Iterable<Def> topLevelDefs () {
@@ -156,6 +168,27 @@ public class EphemeralStore extends ProjectStore {
     return reqdef(defId, _unitSource.get(IdMap.toUnitId(defId)));
   }
 
+  @Override public void find (Codex.Query query, boolean expOnly, List<Def> into) {
+    String lname = query.name.toLowerCase();
+    for (Kind kind : query.kinds) {
+      TreeMultimap<String,Def> index = _indices.get(kind);
+      // if we're doing an exact match, just look up lname directly
+      if (!query.prefix) add(index.get(lname), expOnly, into);
+      else {
+        // if we're doing a prefix match, iterate over the index starting from the first key that's
+        // >= lname, and stop when we reach a key that no longer starts with our prefix
+        for (Map.Entry<String,Collection<Def>> entry : index.asMap().tailMap(lname).entrySet()) {
+          if (!entry.getKey().startsWith(lname)) break;
+          add(entry.getValue(), expOnly, into);
+        }
+      }
+    }
+  }
+
+  private void add (Collection<Def> defs, boolean expOnly, List<Def> into) {
+    for (Def def : defs) if (!expOnly || def.exported) into.add(def);
+  }
+
   @Override public void close () {} // noop!
 
   private void removeDefs (IntSet defIds) {
@@ -182,4 +215,7 @@ public class EphemeralStore extends ProjectStore {
   private final IntObjectMap<List<Use>> _defUses = new IntObjectOpenHashMap<>();
   private final IntObjectMap<Sig> _defSig = new IntObjectOpenHashMap<>();
   private final IntObjectMap<Doc> _defDoc = new IntObjectOpenHashMap<>();
+  private final Map<Kind,TreeMultimap<String,Def>> _indices = new HashMap<>(); {
+    for (Kind kind : Kind.values()) _indices.put(kind, TreeMultimap.create());
+  }
 }

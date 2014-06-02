@@ -41,6 +41,13 @@ public class RefTree {
   }
 
   /**
+   * Returns the number of defs in this tree.
+   */
+  public synchronized int size () {
+    return _byId.size();
+  }
+
+  /**
    * Resolves the id for {@code ref}. If an assignment exists, it will be reused, otherwise a new
    * assignment will be created.
    * @param assignId the id to assign to the def if it's newly created.

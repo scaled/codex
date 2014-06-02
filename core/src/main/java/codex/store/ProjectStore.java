@@ -4,10 +4,12 @@
 
 package codex.store;
 
+import codex.Codex;
 import codex.model.*;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -75,6 +77,13 @@ public abstract class ProjectStore implements AutoCloseable {
    * Returns the source from which {@code defId} originates.
    */
   public abstract Source source (int defId);
+
+  /**
+   * Adds all defs to {@code into} that match {@code query}.
+   * @param expdOnly if true, include only exported defs in the results; if false, include exported
+   * and non-exported defs.
+   */
+  public abstract void find (Codex.Query query, boolean expOnly, List<Def> into);
 
   protected ProjectStore (int projectId) {
     this.projectId = projectId;

@@ -10,9 +10,11 @@ import com.carrotsearch.hppc.IntObjectMap;
 import com.carrotsearch.hppc.IntObjectOpenHashMap;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -21,6 +23,66 @@ import java.util.function.Consumer;
  * inter-project references.
  */
 public class Codex {
+
+  /** Controls whether non-exported defs are included in queries. */
+  public static enum Locality {
+    /** Return only exported defs. */
+    EXPORTED_ONLY {
+      boolean expOnly (boolean primaryStore) { return true; }
+    },
+    /** Return exported and non-exported defs from our primary store,
+      * only exported defs from dependent stores. */
+    EXPORTED_DEPENDENTS {
+      boolean expOnly (boolean primaryStore) { return !primaryStore; }
+    },
+    /** Return exported and non-exported defs from all stores. */
+    ALL {
+      boolean expOnly (boolean primaryStore) { return false; }
+    };
+
+    abstract boolean expOnly (boolean primaryStore);
+  }
+
+  /** Encapsulates a search query. */
+  public static class Query {
+    /** The set of kinds to consider. */
+    public final Set<Kind> kinds;
+    /** The name, or name prefix, to be matched. */
+    public final String name;
+    /** Whether {@link #name} is exact or a prefix. */
+    public final boolean prefix;
+    /** Indicates the criteria for including non-exported defs. */
+    public final Locality locality;
+
+    /** Returns a query that matches {@code name} completely. */
+    public static Query name (String name) { return new Query(name, false); }
+    /** Returns a query that matches {@code name} as a prefix. */
+    public static Query prefix (String name) { return new Query(name, true); }
+
+    public Query kind (Kind kind) {
+      return new Query(EnumSet.of(kind), name, prefix, locality);
+    }
+    public Query kinds (Kind first, Kind... rest) {
+      return new Query(EnumSet.of(first, rest), name, prefix, locality);
+    }
+    public Query expExportedOnly () {
+      return new Query(kinds, name, prefix, Locality.EXPORTED_ONLY);
+    }
+    public Query expAll () {
+      return new Query(kinds, name, prefix, Locality.ALL);
+    }
+
+    private Query (Set<Kind> kinds, String name, boolean prefix, Locality locality) {
+      this.kinds = kinds;
+      this.name = name;
+      this.prefix = prefix;
+      this.locality = locality;
+    }
+
+    private Query (String name, boolean prefix) {
+      this(EnumSet.allOf(Kind.class), name, prefix, Locality.EXPORTED_DEPENDENTS);
+    }
+  }
 
   /**
    * Creates a codex with the supplied set of stores. The stores should be in order of precedence:
@@ -96,13 +158,18 @@ public class Codex {
     return ostore.isPresent();
   }
 
-  // TODO
-  // /** Finds all defs matching the following criteria:
-  //   *  - kind is in `kinds`
-  //   *  - name equals `name` (if `prefix` is false) or
-  //   *  - name starts with `name` (if `prefix` is true)
-  //   * Name comparison is done case-insensitively. */
-  // def find (kinds :Set[Kind], name :String, prefix :Boolean) :Seq[Def]
+  /**
+   * Finds all defs matching the criteria established by {@code query}. Name comparison is done
+   * case-insensitively.
+   */
+  public List<Def> find (Query query) {
+    List<Def> matches = new ArrayList<>();
+    // TODO: support filtering non-public from dependent stores, other query bits
+    ProjectStore primary = _stores.get(0);
+    for (ProjectStore store : _stores) store.find(
+      query, query.locality.expOnly(store == primary), matches);
+    return matches;
+  }
 
   protected DefInfo resolve (ProjectStore store, Def def) {
     return new DefInfo(def, store.source(def.id), store.sig(def.id), store.doc(def.id));

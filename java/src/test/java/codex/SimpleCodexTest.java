@@ -16,6 +16,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import org.junit.*;
@@ -23,8 +24,10 @@ import static org.junit.Assert.*;
 
 public class SimpleCodexTest {
 
-  @Test public void testSimpleCodex () throws IOException {
-    EphemeralStore store = new EphemeralStore(1);
+  public static EphemeralStore store;
+
+  @BeforeClass public static void populateStore () throws IOException {
+    store = new EphemeralStore(1);
     JavaExtractor extract = new JavaExtractor();
     // TODO: pass our classpath onto the extractor; create binary stores for the other jars?
 
@@ -44,7 +47,15 @@ public class SimpleCodexTest {
 
     extract.process(sources, store.writer);
     // dump(store);
+    // System.out.println(store.defCount() + " defs.");
+  }
 
+  @AfterClass public static void clearStore () {
+    store.close();
+    store = null;
+  }
+
+  @Test public void testSimpleCodex () {
     Codex codex = new Codex(Collections.singletonList(store));
     Ref locref = Ref.global("codex.model", "Ref", "Local");
     Optional<DefInfo> locinf = codex.resolve(locref);
@@ -52,6 +63,38 @@ public class SimpleCodexTest {
     DefInfo di = locinf.get();
     assertTrue(di.source.toString().endsWith("Ref.java"));
     assertEquals("public static final class Local extends Ref", di.sig.get().text);
+  }
+
+  @Test public void testFindName () {
+    Codex codex = new Codex(Collections.singletonList(store));
+    List<Def> refdefs = codex.find(Codex.Query.name("ref"));
+    assertFalse(refdefs.isEmpty()); // should be lots of 'ref's
+    for (Def refdef : refdefs) {
+      assertEquals("ref", refdef.name.toLowerCase());
+      // dump(refdef);
+    }
+
+    List<Def> reftypes = codex.find(Codex.Query.name("ref").kind(Kind.TYPE));
+    assertEquals(1, reftypes.size()); // should be only one Ref type
+    for (Def refdef : reftypes) {
+      assertTrue(store.source(refdef.id).toString().endsWith("Ref.java"));
+    }
+  }
+
+  @Test public void testFindPrefix () {
+    Codex codex = new Codex(Collections.singletonList(store));
+    List<Def> emits = codex.find(Codex.Query.prefix("EMIT"));
+    assertTrue(emits.size() > 8); // should be quite a few emitFoo methods
+    for (Def def : emits) {
+      assertTrue(def.name.toLowerCase().startsWith("emit"));
+      // dump(def);
+    }
+  }
+
+  private void dump (Def def) {
+    System.out.println(def);
+    System.out.println(store.sig(def.id).map(s -> s.text).orElse("<no sig>") + " " +
+                       store.source(def.id));
   }
 
   protected void dump (ProjectStore store) {
