@@ -11,26 +11,34 @@ package codex.model;
  */
 public abstract class Ref {
 
-  /** Represents a def within the same project. */
+  /** Represents a def within a known project. */
   public static final class Local extends Ref {
 
+    /** The id of the project in which this def originates. */
+    public final int projectId;
+
     /** The integer id of the def in the project. */
-    public final int id;
+    public final int defId;
+
+    public boolean equals (Local other) {
+      return projectId == other.projectId && defId == other.defId;
+    }
 
     @Override public int hashCode () {
-      return id;
+      return projectId ^ defId;
     }
 
     @Override public boolean equals (Object other) {
-      return (other instanceof Local) && id == ((Local)other).id;
+      return (other instanceof Local) && equals((Local)other);
     }
 
     @Override public String toString () {
-      return "l" + id;
+      return projectId + ":" + defId;
     }
 
-    private Local (int id) {
-      this.id = id;
+    private Local (int projectId, int defId) {
+      this.projectId = projectId;
+      this.defId = defId;
     }
   }
 
@@ -95,9 +103,9 @@ public abstract class Ref {
     }
   }
 
-  /** Returns a local id for {@code id}. */
-  public static Ref local (int id) {
-    return new Local(id);
+  /** Returns a local id for the specified def in the specified project. */
+  public static Ref local (int projectId, int defId) {
+    return new Local(projectId, defId);
   }
 
   private Ref () {} // prevent other subclasses

@@ -7,7 +7,7 @@ package codex.model;
 /**
  * Represents the use of a name somewhere in code.
  */
-public final class Use {
+public final class Use implements Element {
 
   /** Identifies the referent. This may be a local or global ref. */
   public final Ref ref;
@@ -35,6 +35,11 @@ public final class Use {
     return (ref.equals(other.ref) && refKind == other.refKind &&
             offset == other.offset && length == other.length);
   }
+
+  @Override public Ref ref () { return ref; }
+  @Override public int offset () { return offset; }
+  @Override public int length () { return length; }
+  @Override public Kind kind () { return refKind; }
 
   @Override public int hashCode () {
     return ref.hashCode() ^ refKind.hashCode() ^ offset ^ length;

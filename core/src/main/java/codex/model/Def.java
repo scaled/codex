@@ -9,6 +9,9 @@ package codex.model;
  */
 public final class Def implements Element {
 
+  /** The id of the project in which this def originates. */
+  public final int projectId;
+
   /** The unique (within the def's project) id of this def. */
   public final int id;
 
@@ -29,7 +32,9 @@ public final class Def implements Element {
   /** The character offset in the source text at which this def occurs. */
   public final int offset;
 
-  public Def (int id, int outerId, Kind kind, boolean exported, String name, int offset) {
+  public Def (int projectId, int id, int outerId, Kind kind, boolean exported,
+              String name, int offset) {
+    this.projectId = projectId;
     this.id = id;
     this.outerId = outerId;
     this.kind = kind;
@@ -40,17 +45,18 @@ public final class Def implements Element {
 
   /** Returns true if this def is structurally equal to {@code other}. */
   public boolean equals (Def other) {
-    return (id == other.id && outerId == other.outerId && kind == other.kind &&
-            exported == other.exported && name.equals(other.name) && offset == other.offset);
+    return (projectId == other.projectId && id == other.id && outerId == other.outerId &&
+            kind == other.kind && exported == other.exported && name.equals(other.name) &&
+            offset == other.offset);
   }
 
-  @Override public Ref ref () { return Ref.local(id); }
+  @Override public Ref ref () { return Ref.local(projectId, id); }
   @Override public int offset () { return offset; }
   @Override public int length () { return name.length(); }
   @Override public Kind kind () { return kind; }
 
   @Override public int hashCode () {
-    return id ^ outerId;
+    return projectId ^ id ^ outerId;
   }
 
   @Override public boolean equals (Object other) {
@@ -58,6 +64,7 @@ public final class Def implements Element {
   }
 
   @Override public String toString () {
-    return String.format("Def(%d, %d, %s, %s, %s, %d)", id, outerId, kind, exported, name, offset);
+    return String.format("Def(%d, %d, %d, %s, %s, %s, %d)",
+                         projectId, id, outerId, kind, exported, name, offset);
   }
 }

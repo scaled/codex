@@ -5,7 +5,7 @@
 package codex.model;
 
 /** Provides information on a source code element. */
-public interface Element {
+public interface Element extends Comparable<Element> {
 
   /** A reference to this element or it's referent. */
   Ref ref ();
@@ -23,5 +23,10 @@ public interface Element {
     * of the same def, or a use and the def itself, etc. */
   default boolean sameRef (Element other) {
     return ref().equals(other.ref());
+  }
+
+  default int compareTo (Element other) {
+    // these are character offsets in source files and thus will never be so large as to overflow
+    return offset() - other.offset();
   }
 }
