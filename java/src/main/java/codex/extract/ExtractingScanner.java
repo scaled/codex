@@ -234,7 +234,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // add a symtab mapping for this vardef
     if (tree.sym != null) _symtab.peek().put(tree.sym, _id);
 
-    writer.openDef(_id, name, Kind.TERM, flavor, isPub, start,
+    writer.openDef(_id, name, Kind.VALUE, flavor, isPub, start,
                    bodyStart, tree.getEndPosition(_unit.peek().endPositions));
 
     // emit our signature

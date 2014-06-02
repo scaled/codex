@@ -22,5 +22,5 @@ public enum Kind {
 
   /** A named value. Examples: a Java/C#/C++ class field, a C struct member, a function parameter,
    * a local variable. */
-  TERM;
+  VALUE;
 }

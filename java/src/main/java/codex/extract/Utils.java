@@ -29,7 +29,7 @@ public class Utils {
   public static Kind kindForSym (Symbol sym) {
     if (sym instanceof ClassSymbol || sym instanceof TypeSymbol) return Kind.TYPE;
     else if (sym instanceof MethodSymbol) return Kind.FUNC;
-    else if (sym instanceof VarSymbol) return Kind.TERM;
+    else if (sym instanceof VarSymbol) return Kind.VALUE;
     else throw new IllegalArgumentException("Unknown kind for " + sym);
   }
 
@@ -232,10 +232,10 @@ public class Utils {
           printExpr(tree.vartype);
           print(" " + name);
         }
-        // we're either printing the sig for a plain old vardef, or we're nested, in which case we're
-        // printing the signature for a method, but it has parameters, and 'id' is the method id, so
-        // we need to append the var name to get the var def id
-        addSigDef(_nested ? _id.plus(name) : _id, name, Kind.TERM, vpos);
+        // we're either printing the sig for a plain old vardef, or we're nested, in which case
+        // we're printing the signature for a method, but it has parameters, and 'id' is the method
+        // id, so we need to append the var name to get the var def id
+        addSigDef(_nested ? _id.plus(name) : _id, name, Kind.VALUE, vpos);
       } catch (IOException ioe) {
         ioe.printStackTrace(System.err);
       }
