@@ -138,6 +138,16 @@ public class Codex {
   }
 
   /**
+   * Returns a global reference for {@code def}.
+   * @throws NoSuchElementException if def did not originate from one of our project stores.
+   */
+  public Ref.Global ref (Def def) {
+    ProjectStore store = _byId.get(def.projectId);
+    if (store == null) throw new NoSuchElementException("Unknown project for def " + def);
+    return store.ref(def.id);
+  }
+
+  /**
    * Delivers all known defs and uses in {@code source} to {@code cons}. The order in which the defs
    * and uses is unspecified, other than that each def will be immediately followed by the uses
    * nested immediately inside that def.
