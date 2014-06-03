@@ -4,6 +4,14 @@
 
 package codex.model;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
 /**
  * Defines the different places from which source comes.
  */
@@ -17,6 +25,10 @@ public abstract class Source {
 
     public File (String path) {
       this.path = path;
+    }
+
+    @Override public Reader reader () throws IOException {
+      return new FileReader(path);
     }
 
     @Override public boolean equals (Object other) {
@@ -49,6 +61,12 @@ public abstract class Source {
     public ArchiveEntry (String archivePath, String sourcePath) {
       this.archivePath = archivePath;
       this.sourcePath = sourcePath;
+    }
+
+    @Override public Reader reader () throws IOException {
+      ZipFile file = new ZipFile(archivePath);
+      ZipEntry entry = file.getEntry(sourcePath);
+      return new InputStreamReader(file.getInputStream(entry), "UTF-8");
     }
 
     @Override public boolean equals (Object other) {
@@ -93,6 +111,10 @@ public abstract class Source {
     int didx = path.lastIndexOf('.');
     return (didx == -1) ? "" : path.substring(didx+1);
   }
+
+  /** Creates a reader that can be used to read the contents of this source. Note: this reader is
+    * not buffered, wrap it in a {@link BufferedReader} as appropriate. */
+  public abstract Reader reader () throws IOException;
 
   protected abstract String path ();
   protected abstract char pathSeparator ();
