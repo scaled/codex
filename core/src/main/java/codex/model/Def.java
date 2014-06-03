@@ -61,6 +61,22 @@ public final class Def implements Element {
     return project.doc(id);
   }
 
+  /** Returns a global reference to this def. */
+  public Ref.Global globalRef () {
+    return project.ref(id);
+  }
+
+  /** Computes and returns the fully qualified name of this def. */
+  public String fqName () {
+    return toFqName(globalRef());
+  }
+
+  /** Computes and returns the qualifier for this def. This is {@link #fqName} minus the name of the
+    * def and the path separator that joins it to its qualifier. */
+  public String qualifier () {
+    return toFqName(globalRef().parent);
+  }
+
   /** Returns true if this def is structurally equal to {@code other}. */
   public boolean equals (Def other) {
     return (project == other.project && id == other.id && outerId == other.outerId &&
@@ -84,5 +100,21 @@ public final class Def implements Element {
   @Override public String toString () {
     return String.format("Def(%s, %d, %d, %s, %s, %s, %d)",
                          project, id, outerId, kind, exported, name, offset);
+  }
+
+  protected String toFqName (Ref.Global ref) {
+    Lang lang = Lang.forExt(source().fileExt());
+    StringBuilder sb = new StringBuilder();
+    toFqName(ref, lang, sb);
+    return sb.toString();
+  }
+
+  protected void toFqName (Ref.Global ref, Lang lang, StringBuilder sb) {
+    if (ref.parent != Ref.Global.ROOT) {
+      toFqName(ref.parent, lang, sb);
+    }
+    Kind kind = project.def(ref).map(Def::kind).orElse(Kind.MODULE);
+    if (sb.length() > 0) sb.append(lang.pathPrefix(kind));
+    sb.append(ref.id);
   }
 }
