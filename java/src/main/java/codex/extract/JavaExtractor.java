@@ -61,7 +61,10 @@ public class JavaExtractor {
       List<String> opts = Lists.newArrayList("-Xjcov");
 
       String cp = Joiner.on(File.pathSeparator).join(classpath());
-      if (cp.length() > 0) opts.add("-classpath " + cp);
+      if (cp.length() > 0) {
+        opts.add("-classpath");
+        opts.add(cp);
+      }
 
       JavacTaskImpl task = (JavacTaskImpl)_compiler.getTask(null, null, null, opts, null, files);
       Iterable<? extends CompilationUnitTree> asts = task.parse();
