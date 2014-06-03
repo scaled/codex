@@ -83,13 +83,13 @@ public class JavaExtractor {
     }
   }
 
-   private JavaFileObject mkTestObject (String file, String code) {
-     return new SimpleJavaFileObject(URI.create("test:/" + file), JavaFileObject.Kind.SOURCE) {
-       @Override public CharSequence getCharContent (boolean ignoreEncodingErrors) {
-         return code;
-       }
-     };
-   }
+  private JavaFileObject mkTestObject (String file, String code) {
+    return new SimpleJavaFileObject(URI.create("test:/" + file), JavaFileObject.Kind.SOURCE) {
+      @Override public CharSequence getCharContent (boolean ignoreEncodingErrors) {
+        return code;
+      }
+    };
+  }
 
   private JavacTool _compiler = JavacTool.create();
 }
