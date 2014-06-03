@@ -22,13 +22,18 @@ public abstract class Source {
     @Override public boolean equals (Object other) {
       return (other instanceof File) && path.equals(((File)other).path);
     }
-
     @Override public int hashCode () {
       return path.hashCode();
     }
-
     @Override public String toString () {
       return path;
+    }
+
+    @Override protected String path () {
+      return path;
+    }
+    @Override protected char pathSeparator () {
+      return java.io.File.separatorChar;
     }
   }
 
@@ -51,13 +56,18 @@ public abstract class Source {
               archivePath.equals(((ArchiveEntry)other).archivePath) &&
               sourcePath.equals(((ArchiveEntry)other).sourcePath));
     }
-
     @Override public int hashCode () {
       return archivePath.hashCode() ^ sourcePath.hashCode();
     }
-
     @Override public String toString () {
       return archivePath + "!" + sourcePath;
+    }
+
+    @Override protected String path () {
+      return sourcePath;
+    }
+    @Override protected char pathSeparator () {
+      return '/'; // zip path separator always '/'
     }
   }
 
@@ -70,6 +80,22 @@ public abstract class Source {
     if (eidx == -1) return new File(string);
     else return new ArchiveEntry(string.substring(0, eidx), string.substring(eidx+1));
   }
+
+  /** Returns the name of the file represented by this source. */
+  public String fileName () {
+    String path = path();
+    return path.substring(path.lastIndexOf(pathSeparator())+1);
+  }
+
+  /** Returns the extension of the file represented by this source, or "" if it has none. */
+  public String fileExt () {
+    String path = path();
+    int didx = path.lastIndexOf('.');
+    return (didx == -1) ? "" : path.substring(didx+1);
+  }
+
+  protected abstract String path ();
+  protected abstract char pathSeparator ();
 
   private Source () {} // seal it!
 }
