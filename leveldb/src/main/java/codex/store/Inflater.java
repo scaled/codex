@@ -14,7 +14,8 @@ import java.util.List;
  */
 public class Inflater extends Flater {
 
-  public Inflater (byte[] data) {
+  public Inflater (ProjectStore project, byte[] data) {
+    _project = project;
     _data = data;
     _buf = ByteBuffer.wrap(data);
   }
@@ -33,9 +34,8 @@ public class Inflater extends Flater {
   }
 
   public Def getDef () {
-    return new Def(getInt() /*projectId*/, getInt() /*defId*/, getInt() /*outerId*/,
-                   Kind.valueOf(getString()), getBoolean() /*exported*/,
-                   getString() /*name*/, getInt() /*offset*/);
+    return new Def(_project, getInt() /*defId*/, getInt() /*outerId*/, Kind.valueOf(getString()),
+                   getBoolean() /*exported*/, getString() /*name*/, getInt() /*offset*/);
   }
 
   public List<Def> getDefs () {
@@ -47,12 +47,13 @@ public class Inflater extends Flater {
 
   public Ref getRef () {
     boolean local = getBoolean();
-    if (local) return Ref.local(getInt() /*projectId*/, getInt() /*defId*/);
+    if (local) return Ref.local(_project, getInt() /*defId*/);
     else return Ref.Global.fromString(getString());
   }
 
   public Use getUse () {
-    return new Use(getRef(), Kind.valueOf(getString()), getInt() /*offset*/, getInt() /*length*/);
+    return new Use(getRef(), Kind.valueOf(getString()),
+                   getInt() /*offset*/, getInt() /*length*/);
   }
 
   public List<Use> getUses () {
@@ -70,6 +71,7 @@ public class Inflater extends Flater {
     return new Doc(getInt() /*offset*/, getInt() /*length*/, getUses());
   }
 
+  private final ProjectStore _project;
   private final byte[] _data;
   private final ByteBuffer _buf;
 }

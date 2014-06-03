@@ -4,6 +4,8 @@
 
 package codex.model;
 
+import codex.store.ProjectStore;
+
 /**
  * Uniquely identifies a def. This comes in two flavors: a local ref, used within a project to
  * reference other defs in that same project, and a global ref, used to reference defs in other
@@ -14,18 +16,18 @@ public abstract class Ref {
   /** Represents a def within a known project. */
   public static final class Local extends Ref {
 
-    /** The id of the project in which this def originates. */
-    public final int projectId;
+    /** The project in which this def originates. */
+    public final ProjectStore project;
 
     /** The integer id of the def in the project. */
     public final int defId;
 
     public boolean equals (Local other) {
-      return projectId == other.projectId && defId == other.defId;
+      return project == other.project && defId == other.defId;
     }
 
     @Override public int hashCode () {
-      return projectId ^ defId;
+      return project.hashCode() ^ defId;
     }
 
     @Override public boolean equals (Object other) {
@@ -33,11 +35,11 @@ public abstract class Ref {
     }
 
     @Override public String toString () {
-      return projectId + ":" + defId;
+      return project + ":" + defId;
     }
 
-    private Local (int projectId, int defId) {
-      this.projectId = projectId;
+    private Local (ProjectStore project, int defId) {
+      this.project = project;
       this.defId = defId;
     }
   }
@@ -104,8 +106,8 @@ public abstract class Ref {
   }
 
   /** Returns a local id for the specified def in the specified project. */
-  public static Ref local (int projectId, int defId) {
-    return new Local(projectId, defId);
+  public static Ref local (ProjectStore project, int defId) {
+    return new Local(project, defId);
   }
 
   /** Returns a global ref for the specified (outer- to inner-most) name path. */

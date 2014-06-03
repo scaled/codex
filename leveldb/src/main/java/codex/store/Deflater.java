@@ -42,10 +42,10 @@ public class Deflater extends Flater {
   public Deflater putDef (Def def) {
     byte[] kind = toBytes(def.kind.name());
     byte[] name = toBytes(def.name);
-    int size = (4 /*projectId*/ + 4 /*id*/ + 4 /*outerId*/ + 4+kind.length + 1 /*exported*/ +
-                4+name.length + 4 /*offset*/);
-    prepPut(size).putInt(def.projectId).putInt(def.id).putInt(def.outerId).putInt(kind.length).
-      put(kind).put(def.exported ? TRUE : FALSE).putInt(name.length).put(name).putInt(def.offset);
+    int size = (4 /*id*/ + 4 /*outerId*/ + 4+kind.length + 1 /*exported*/ + 4+name.length +
+                4 /*offset*/);
+    prepPut(size).putInt(def.id).putInt(def.outerId).putInt(kind.length).put(kind).
+      put(def.exported ? TRUE : FALSE).putInt(name.length).put(name).putInt(def.offset);
     return this;
   }
 
@@ -58,7 +58,6 @@ public class Deflater extends Flater {
   public Deflater putRef (Ref ref) {
     if (ref instanceof Ref.Local) {
       putBoolean(true);
-      putInt(((Ref.Local)ref).projectId);
       putInt(((Ref.Local)ref).defId);
     } else {
       putBoolean(false);

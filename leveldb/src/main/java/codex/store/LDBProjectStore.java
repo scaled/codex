@@ -4,6 +4,7 @@
 
 package codex.store;
 
+import codex.Codex;
 import codex.extract.StoreWriter;
 import codex.extract.Writer;
 import codex.model.*;
@@ -42,7 +43,7 @@ public class LDBProjectStore extends ProjectStore {
   public static final byte DEFID_TO_DOC = 9;
 
   /** A writer that can be used to write metadata to this store. Handles incremental updates. */
-  public Writer writer = new StoreWriter(projectId) {
+  public Writer writer = new StoreWriter(this) {
 
     @Override protected int assignUnitId (Source source) {
       return 0; // TODO
@@ -69,8 +70,7 @@ public class LDBProjectStore extends ProjectStore {
     }
   };
 
-  public LDBProjectStore (int projectId, File store) throws IOException {
-    super(projectId);
+  public LDBProjectStore (File store) throws IOException {
     _store = store;
     _db = createDB(store);
   }
@@ -150,6 +150,10 @@ public class LDBProjectStore extends ProjectStore {
     return Source.fromString(reqById(UNITID_TO_SOURCE, IdMap.toUnitId(defId)).getString());
   }
 
+  @Override public void find (Codex.Query query, boolean expOnly, List<Def> into) {
+    // TODO
+  }
+
   @Override public void close () throws IOException {
     _db.close();
   }
@@ -171,7 +175,7 @@ public class LDBProjectStore extends ProjectStore {
 
   private Inflater getById (byte table, int defId) {
     byte[] data = _db.get(idKey(table, defId));
-    return (data == null) ? null : new Inflater(data);
+    return (data == null) ? null : new Inflater(this, data);
   }
 
   private Inflater reqById (byte table, int defId) {

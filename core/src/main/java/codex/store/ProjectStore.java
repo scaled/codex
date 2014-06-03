@@ -17,9 +17,6 @@ import java.util.function.Consumer;
  */
 public abstract class ProjectStore implements AutoCloseable {
 
-  /** Uniquely identifies this project among all projects known to Codex. */
-  public final int projectId;
-
   /**
    * Returns the list of all top-level defs in this project.
    */
@@ -84,8 +81,4 @@ public abstract class ProjectStore implements AutoCloseable {
    * and non-exported defs.
    */
   public abstract void find (Codex.Query query, boolean expOnly, List<Def> into);
-
-  protected ProjectStore (int projectId) {
-    this.projectId = projectId;
-  }
 }

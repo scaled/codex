@@ -11,6 +11,7 @@ import com.carrotsearch.hppc.IntObjectOpenHashMap;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -97,7 +98,6 @@ public class Codex {
    */
   public Codex (Iterable<ProjectStore> stores) {
     _stores = Lists.newArrayList(stores);
-    for (ProjectStore store : stores) _byId.put(store.projectId, store);
   }
 
   /**
@@ -118,20 +118,18 @@ public class Codex {
   }
 
   /**
-   * Resolves and returns detail information for {@code ref}.
+   * Resolves the {@link Def} for {@code ref}.
    */
-  public Optional<DefInfo> resolve (Ref ref) {
+  public Optional<Def> resolve (Ref ref) {
     if (ref instanceof Ref.Local) {
       Ref.Local lref = (Ref.Local)ref;
-      ProjectStore store = _byId.get(lref.projectId);
-      if (store == null) throw new NoSuchElementException("Unknown project for local ref " + ref);
-      return Optional.of(resolve(store, store.def(lref.defId)));
+      return Optional.of(lref.project.def(lref.defId));
 
     } else {
       Ref.Global gref = (Ref.Global)ref;
       for (ProjectStore store : _stores) {
         Optional<Def> odef = store.def(gref);
-        if (odef.isPresent()) return Optional.of(resolve(store, odef.get()));
+        if (odef.isPresent()) return odef;
       }
       return Optional.empty();
     }
@@ -142,9 +140,7 @@ public class Codex {
    * @throws NoSuchElementException if def did not originate from one of our project stores.
    */
   public Ref.Global ref (Def def) {
-    ProjectStore store = _byId.get(def.projectId);
-    if (store == null) throw new NoSuchElementException("Unknown project for def " + def);
-    return store.ref(def.id);
+    return def.project.ref(def.id);
   }
 
   /**
@@ -181,10 +177,5 @@ public class Codex {
     return matches;
   }
 
-  protected DefInfo resolve (ProjectStore store, Def def) {
-    return new DefInfo(def, store.source(def.id), store.sig(def.id), store.doc(def.id));
-  }
-
   private final List<ProjectStore> _stores;
-  private final IntObjectMap<ProjectStore> _byId = new IntObjectOpenHashMap<>();
 }

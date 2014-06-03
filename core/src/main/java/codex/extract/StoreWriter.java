@@ -16,10 +16,10 @@ import java.util.Deque;
  */
 public abstract class StoreWriter extends Writer {
 
-  public final int projectId;
+  public final ProjectStore project;
 
-  public StoreWriter (int projectId) {
-    this.projectId = projectId;
+  public StoreWriter (ProjectStore project) {
+    this.project = project;
   }
 
   @Override public void openUnit (Source source) {
@@ -32,7 +32,7 @@ public abstract class StoreWriter extends Writer {
     int defId = resolveDefId(id);
     _defIdStack.push(defId);
     // TODO: add flavor, bodyOffset, bodyEnd to Def? track them separately?
-    storeDef(new Def(projectId, defId, outerId, kind, exported, name, offset));
+    storeDef(new Def(project, defId, outerId, kind, exported, name, offset));
   }
 
   @Override public void emitRelation (Relation relation, Ref.Global target) {
@@ -43,7 +43,7 @@ public abstract class StoreWriter extends Writer {
     _curSig = new Sig(text, Lists.newArrayList(), Lists.newArrayList());
   }
   @Override public void emitSigDef (Ref.Global id, String name, Kind kind, int offset) {
-    _curSig.defs.add(new Def(projectId, resolveDefId(id), 0, kind, false, name, offset));
+    _curSig.defs.add(new Def(project, resolveDefId(id), 0, kind, false, name, offset));
   }
   @Override public void emitSigUse (Ref.Global target, String name, Kind kind, int offset) {
     _curSig.uses.add(new Use(target, kind, offset, name.length()));

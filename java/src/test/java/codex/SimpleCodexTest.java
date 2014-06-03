@@ -27,7 +27,7 @@ public class SimpleCodexTest {
   public static EphemeralStore store;
 
   @BeforeClass public static void populateStore () throws IOException {
-    store = new EphemeralStore(1);
+    store = new EphemeralStore();
     JavaExtractor extract = new JavaExtractor();
     // TODO: pass our classpath onto the extractor; create binary stores for the other jars?
 
@@ -58,11 +58,11 @@ public class SimpleCodexTest {
   @Test public void testSimpleCodex () {
     Codex codex = new Codex(Collections.singletonList(store));
     Ref locref = Ref.global("codex.model", "Ref", "Local");
-    Optional<DefInfo> locinf = codex.resolve(locref);
-    assertTrue(locinf.isPresent());
-    DefInfo di = locinf.get();
-    assertTrue(di.source.toString().endsWith("Ref.java"));
-    assertEquals("public static final class Local extends Ref", di.sig.get().text);
+    Optional<Def> locdef = codex.resolve(locref);
+    assertTrue(locdef.isPresent());
+    Def def = locdef.get();
+    assertTrue(def.source().toString().endsWith("Ref.java"));
+    assertEquals("public static final class Local extends Ref", def.sig().get().text);
   }
 
   @Test public void testFindName () {

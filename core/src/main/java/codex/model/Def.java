@@ -4,13 +4,16 @@
 
 package codex.model;
 
+import codex.store.ProjectStore;
+import java.util.Optional;
+
 /**
  * Represents the definition of a name somewhere in code.
  */
 public final class Def implements Element {
 
-  /** The id of the project in which this def originates. */
-  public final int projectId;
+  /** The project from which this def originates. */
+  public final ProjectStore project;
 
   /** The unique (within the def's project) id of this def. */
   public final int id;
@@ -32,9 +35,9 @@ public final class Def implements Element {
   /** The character offset in the source text at which this def occurs. */
   public final int offset;
 
-  public Def (int projectId, int id, int outerId, Kind kind, boolean exported,
+  public Def (ProjectStore project, int id, int outerId, Kind kind, boolean exported,
               String name, int offset) {
-    this.projectId = projectId;
+    this.project = project;
     this.id = id;
     this.outerId = outerId;
     this.kind = kind;
@@ -43,20 +46,35 @@ public final class Def implements Element {
     this.offset = offset;
   }
 
+  /** Resolves and returns the source file in which this def occurs. */
+  public Source source () {
+    return project.source(id);
+  }
+
+  /** Resolves and returns the signature of the def, and sig defs/uses, if available. */
+  public Optional<Sig> sig () {
+    return project.sig(id);
+  }
+
+  /** Resolves and returns the documentation for the def, if available. */
+  public Optional<Doc> doc () {
+    return project.doc(id);
+  }
+
   /** Returns true if this def is structurally equal to {@code other}. */
   public boolean equals (Def other) {
-    return (projectId == other.projectId && id == other.id && outerId == other.outerId &&
+    return (project == other.project && id == other.id && outerId == other.outerId &&
             kind == other.kind && exported == other.exported && name.equals(other.name) &&
             offset == other.offset);
   }
 
-  @Override public Ref ref () { return Ref.local(projectId, id); }
+  @Override public Ref ref () { return Ref.local(project, id); }
   @Override public int offset () { return offset; }
   @Override public int length () { return name.length(); }
   @Override public Kind kind () { return kind; }
 
   @Override public int hashCode () {
-    return projectId ^ id ^ outerId;
+    return project.hashCode() ^ id ^ outerId;
   }
 
   @Override public boolean equals (Object other) {
@@ -64,7 +82,7 @@ public final class Def implements Element {
   }
 
   @Override public String toString () {
-    return String.format("Def(%d, %d, %d, %s, %s, %s, %d)",
-                         projectId, id, outerId, kind, exported, name, offset);
+    return String.format("Def(%s, %d, %d, %s, %s, %s, %d)",
+                         project, id, outerId, kind, exported, name, offset);
   }
 }

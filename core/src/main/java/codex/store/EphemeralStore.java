@@ -31,7 +31,7 @@ import java.util.Set;
 public class EphemeralStore extends ProjectStore {
 
   /** A writer that can be used to write metadata to this store. Handles incremental updates. */
-  public final Writer writer = new StoreWriter(projectId) {
+  public final Writer writer = new StoreWriter(this) {
 
     @Override public void closeUnit () {
       super.closeUnit();
@@ -89,10 +89,6 @@ public class EphemeralStore extends ProjectStore {
     private IdMap _curIdMap;
     private IntSet _oldDefIds;
   };
-
-  public EphemeralStore (int projectId) {
-    super(projectId);
-  }
 
   /**
    * Wipes the contents of this store, preparing it to be rebuild from scratch.
