@@ -7,7 +7,7 @@ package codex.model;
 /** Provides information on a source code element. */
 public interface Element extends Comparable<Element> {
 
-  /** A reference to this element or it's referent. */
+  /** A reference to this element or its referent. */
   Ref ref ();
 
   /** The offset into the source text at which this element occurs. */
