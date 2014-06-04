@@ -301,7 +301,13 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       // TODO: is there a better way to get the start position of the selected name?
       int selend = tree.getStartPosition() + tree.selected.toString().length();
       int offset = _text.indexOf(name, selend);
-      writer.emitUse(targetForSym(name, tree.sym), name, kindForSym(tree.sym), offset);
+      // TODO: there's some weirdness with lambdas here: when we see (f -> f...) the use of f has a
+      // tree name that is the fully qualified type name of f, so if f was java.lang.reflect.Method
+      // that's what we see in the AST, rather than something like JCIdentifier(f)
+      if (offset == -1) System.err.println(
+        String.format("Unable to find use in member select %s (%s @ %d / %d %s)",
+                      tree, name, selend, tree.getStartPosition(), tree.selected.toString()));
+      else writer.emitUse(targetForSym(name, tree.sym), name, kindForSym(tree.sym), offset);
     }
     return null;
   }
