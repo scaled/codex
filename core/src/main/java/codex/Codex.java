@@ -23,7 +23,7 @@ import java.util.function.Consumer;
  * ProjectStore}s (generally a leaf project and all of its dependencies) and handles resolution of
  * inter-project references.
  */
-public class Codex {
+public abstract class Codex {
 
   /** Controls whether non-exported defs are included in queries. */
   public static enum Locality {
@@ -85,10 +85,17 @@ public class Codex {
     }
   }
 
+  /** A Codex which is supplied a fixed list of stores at construct time. */
+  public static class Simple extends Codex {
+    public Simple (Iterable<ProjectStore> stores) { _stores = stores; }
+    @Override public Iterable<ProjectStore> stores () { return _stores; }
+    private Iterable<ProjectStore> _stores;
+  }
+
   /**
-   * Creates a codex with the supplied set of stores. The stores should be in order of precedence:
-   * the first store having the highest precedence, the last having the lowest. Global references
-   * will be resolved by querying each store in turn, and the first to claim knowledge of a ref is
+   * Returns all stores known to this codex. The stores should be in order of precedence: the first
+   * store having the highest precedence, the last having the lowest. Global references will be
+   * resolved by querying each store in turn, and the first to claim knowledge of a ref is
    * considered definitive.
    *
    * <p>This models the Java classpath mechanism, but the expectation is that all compilers use a
@@ -96,22 +103,13 @@ public class Codex {
    * names. Of course, this is only even meaningful when multiple projects claim knowledge of the
    * same global names, but you'd be surprised how often that happens in practice.</p>
    */
-  public Codex (Iterable<ProjectStore> stores) {
-    _stores = Lists.newArrayList(stores);
-  }
-
-  /**
-   * Returns all stores known to this codex, from highest precedence to lowest.
-   */
-  public Iterable<ProjectStore> stores () {
-    return _stores;
-  }
+  public abstract Iterable<ProjectStore> stores ();
 
   /**
    * Returns the store that contains index information for {@code source}, if available.
    */
   public Optional<ProjectStore> storeFor (Source source) {
-    for (ProjectStore store : _stores) {
+    for (ProjectStore store : stores()) {
       if (store.isIndexed(source)) return Optional.of(store);
     }
     return Optional.empty();
@@ -127,7 +125,7 @@ public class Codex {
 
     } else {
       Ref.Global gref = (Ref.Global)ref;
-      for (ProjectStore store : _stores) {
+      for (ProjectStore store : stores()) {
         Optional<Def> odef = store.def(gref);
         if (odef.isPresent()) return odef;
       }
@@ -148,7 +146,7 @@ public class Codex {
    * @return true if elems were delivered, false if no project knew of {@code source}.
    */
   public boolean visit (Source source, Consumer<Element> cons) {
-    for (ProjectStore ps : _stores) if (ps.visit(source, cons)) return true;
+    for (ProjectStore ps : stores()) if (ps.visit(source, cons)) return true;
     return false;
   }
 
@@ -157,13 +155,13 @@ public class Codex {
    * case-insensitively.
    */
   public List<Def> find (Query query) {
-    List<Def> matches = new ArrayList<>();
     // TODO: support filtering non-public from dependent stores, other query bits
-    ProjectStore primary = _stores.get(0);
-    for (ProjectStore store : _stores) store.find(
-      query, query.locality.expOnly(store == primary), matches);
+    List<Def> matches = new ArrayList<>();
+    boolean primary = true; // the first store is primary
+    for (ProjectStore store : stores()) {
+      store.find(query, query.locality.expOnly(primary), matches);
+      primary = false; // subsequent stores are not
+    }
     return matches;
   }
-
-  private final List<ProjectStore> _stores;
 }

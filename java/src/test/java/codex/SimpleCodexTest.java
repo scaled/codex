@@ -55,8 +55,12 @@ public class SimpleCodexTest {
     store = null;
   }
 
+  public Codex simpleCodex () {
+    return new Codex.Simple(Collections.singletonList(store));
+  }
+
   @Test public void testSimpleCodex () {
-    Codex codex = new Codex(Collections.singletonList(store));
+    Codex codex = simpleCodex();
     Ref locref = Ref.global("codex.model", "Ref", "Local");
     Optional<Def> locdef = codex.resolve(locref);
     assertTrue(locdef.isPresent());
@@ -66,7 +70,7 @@ public class SimpleCodexTest {
   }
 
   @Test public void testFindName () {
-    Codex codex = new Codex(Collections.singletonList(store));
+    Codex codex = simpleCodex();
     List<Def> refdefs = codex.find(Codex.Query.name("ref"));
     assertFalse(refdefs.isEmpty()); // should be lots of 'ref's
     for (Def refdef : refdefs) {
@@ -82,7 +86,7 @@ public class SimpleCodexTest {
   }
 
   @Test public void testFindPrefix () {
-    Codex codex = new Codex(Collections.singletonList(store));
+    Codex codex = simpleCodex();
     List<Def> emits = codex.find(Codex.Query.prefix("EMIT"));
     assertTrue(emits.size() > 8); // should be quite a few emitFoo methods
     for (Def def : emits) {
