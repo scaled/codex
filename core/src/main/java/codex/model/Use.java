@@ -41,6 +41,10 @@ public final class Use implements Element {
   @Override public int length () { return length; }
   @Override public Kind kind () { return refKind; }
 
+  @Override public String toString () {
+    return String.format("Use(%s, %s, %d, %d)", ref, refKind, offset, length);
+  }
+
   @Override public int hashCode () {
     return ref.hashCode() ^ refKind.hashCode() ^ offset ^ length;
   }
