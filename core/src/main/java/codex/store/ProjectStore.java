@@ -81,4 +81,23 @@ public abstract class ProjectStore implements AutoCloseable {
    * and non-exported defs.
    */
   public abstract void find (Codex.Query query, boolean expOnly, List<Def> into);
+
+  /**
+   * Delivers all known defs and uses in {@code source} to {@code cons}. The order in which the defs
+   * and uses is unspecified, other than that each def will be immediately followed by the uses
+   * nested immediately inside that def.
+   *
+   * <p>This is generally used to build an in-memory index for a given source file for things like
+   * code highlighting and name resolution.</p>
+   *
+   * @return true if elems were delivered, false if {@code source} was unknown to this store.
+   */
+  public boolean index (Source source, Consumer<Element> cons) {
+    if (!isIndexed(source)) return false;
+    for (Def def : sourceDefs(source)) {
+      cons.accept(def);
+      for (Use use : uses(def.id)) cons.accept(use);
+    }
+    return true;
+  }
 }

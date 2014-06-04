@@ -144,23 +144,12 @@ public class Codex {
   }
 
   /**
-   * Delivers all known defs and uses in {@code source} to {@code cons}. The order in which the defs
-   * and uses is unspecified, other than that each def will be immediately followed by the uses
-   * nested immediately inside that def.
-   *
-   * <p>This is generally used to build an in-memory index for a given source file for things like
-   * code highlighting and name resolution.</p>
-   *
+   * Locates the store that handles {@code source} and calls {@link ProjectStore#index} on it.
    * @return true if elems were delivered, false if no project knew of {@code source}.
    */
   public boolean index (Source source, Consumer<Element> cons) {
     Optional<ProjectStore> ostore = storeFor(source);
-    ostore.ifPresent(store -> {
-      for (Def def : store.sourceDefs(source)) {
-        cons.accept(def);
-        for (Use use : store.uses(def.id)) cons.accept(use);
-      }
-    });
+    ostore.ifPresent(store -> store.index(source, cons));
     return ostore.isPresent();
   }
 
