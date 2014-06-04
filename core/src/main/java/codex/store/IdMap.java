@@ -37,7 +37,6 @@ public class IdMap {
     int assignId = _nextDefId;
     int id = _tree.resolve(ref, assignId);
     if (id == assignId) {
-      System.out.println("Assigned " + id + " to " + ref);
       _ids.add(id);
       _nextDefId += 1;
     }
