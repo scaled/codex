@@ -6,7 +6,6 @@ package codex.store;
 
 import codex.model.Ref;
 import com.carrotsearch.hppc.IntOpenHashSet;
-import com.carrotsearch.hppc.IntSet;
 
 /**
  * Aids with assigning ids to defs. Also helps with the incremental update of a set of defs,
@@ -38,18 +37,36 @@ public class IdMap {
     int assignId = _nextDefId;
     int id = _tree.resolve(ref, assignId);
     if (id == assignId) {
+      System.out.println("Assigned " + id + " to " + ref);
       _ids.add(id);
       _nextDefId += 1;
     }
+    _toPurge.remove(id);
     return id;
   }
 
   /** Returns a copy of all ref ids assigned for this compilation unit. */
-  public IntSet copyIds () {
+  public synchronized IntOpenHashSet copyIds () {
     return new IntOpenHashSet(_ids);
   }
 
+  /** Snapshots the current id set in preparation for reindexing our compilation unit. Should be
+    * followed by a call to {@link #purge} after the unit is reindexed. */
+  public synchronized void snapshot () {
+    _toPurge = copyIds();
+  }
+
+  /** Purges any ids that were not re-resolved since the last call to {@link #snapshot}.
+    * @return the set of purged ids. */
+  public synchronized IntOpenHashSet purge () {
+    IntOpenHashSet toPurge = _toPurge;
+    _toPurge = null;
+    _ids.removeAll(toPurge);
+    return toPurge;
+  }
+
   private final RefTree _tree;
-  private final IntSet _ids = new IntOpenHashSet();
+  private final IntOpenHashSet _ids = new IntOpenHashSet();
+  private IntOpenHashSet _toPurge = new IntOpenHashSet();
   private int _nextDefId;
 }

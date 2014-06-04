@@ -25,10 +25,11 @@ import static org.junit.Assert.*;
 public class SimpleCodexTest {
 
   public static EphemeralStore store;
+  public static JavaExtractor extract;
 
   @BeforeClass public static void populateStore () throws IOException {
     store = new EphemeralStore();
-    JavaExtractor extract = new JavaExtractor();
+    extract = new JavaExtractor();
     // TODO: pass our classpath onto the extractor; create binary stores for the other jars?
 
     List<Path> sources = new ArrayList<>();
@@ -53,6 +54,7 @@ public class SimpleCodexTest {
   @AfterClass public static void clearStore () {
     store.close();
     store = null;
+    extract = null;
   }
 
   public Codex simpleCodex () {

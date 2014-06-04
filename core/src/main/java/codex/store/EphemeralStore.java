@@ -36,24 +36,21 @@ public class EphemeralStore extends ProjectStore {
     @Override public void closeUnit () {
       super.closeUnit();
       // purge any old def ids from this unit
-      if (!_oldDefIds.isEmpty()) removeDefs(_oldDefIds);
+      removeDefs(_curIdMap.purge());
       _curIdMap = null;
       _oldDefIds = null;
     }
 
     @Override protected int assignUnitId (Source source) {
       IdMap idMap = _unitIdMap.get(source);
-      if (idMap != null) {
-        _curIdMap = idMap;
-        _oldDefIds = idMap.copyIds();
-        return idMap.unitId;
-      } else {
+      if (idMap == null) {
         int unitId = _unitSource.size()+1;
         _unitSource.put(unitId, source);
-        _unitIdMap.put(source, _curIdMap = new IdMap(_projectRefs, unitId));
-        _oldDefIds = new IntOpenHashSet();
-        return unitId;
+        _unitIdMap.put(source, idMap = new IdMap(_projectRefs, unitId));
       }
+      _curIdMap = idMap;
+      idMap.snapshot();
+      return idMap.unitId;
     }
 
     @Override protected int resolveDefId (Ref.Global id) {
@@ -87,7 +84,7 @@ public class EphemeralStore extends ProjectStore {
     }
 
     private IdMap _curIdMap;
-    private IntSet _oldDefIds;
+    private IntOpenHashSet _oldDefIds;
   };
 
   /**
