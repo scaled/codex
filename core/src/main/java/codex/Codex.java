@@ -144,12 +144,12 @@ public class Codex {
   }
 
   /**
-   * Locates the store that handles {@code source} and calls {@link ProjectStore#index} on it.
+   * Locates the store that handles {@code source} and calls {@link ProjectStore#visit} on it.
    * @return true if elems were delivered, false if no project knew of {@code source}.
    */
-  public boolean index (Source source, Consumer<Element> cons) {
+  public boolean visit (Source source, Consumer<Element> cons) {
     Optional<ProjectStore> ostore = storeFor(source);
-    ostore.ifPresent(store -> store.index(source, cons));
+    ostore.ifPresent(store -> store.visit(source, cons));
     return ostore.isPresent();
   }
 

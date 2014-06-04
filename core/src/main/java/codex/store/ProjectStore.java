@@ -92,7 +92,7 @@ public abstract class ProjectStore implements AutoCloseable {
    *
    * @return true if elems were delivered, false if {@code source} was unknown to this store.
    */
-  public boolean index (Source source, Consumer<Element> cons) {
+  public boolean visit (Source source, Consumer<Element> cons) {
     if (!isIndexed(source)) return false;
     for (Def def : sourceDefs(source)) {
       cons.accept(def);
