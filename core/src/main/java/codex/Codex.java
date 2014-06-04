@@ -148,9 +148,8 @@ public class Codex {
    * @return true if elems were delivered, false if no project knew of {@code source}.
    */
   public boolean visit (Source source, Consumer<Element> cons) {
-    Optional<ProjectStore> ostore = storeFor(source);
-    ostore.ifPresent(store -> store.visit(source, cons));
-    return ostore.isPresent();
+    for (ProjectStore ps : _stores) if (ps.visit(source, cons)) return true;
+    return false;
   }
 
   /**
