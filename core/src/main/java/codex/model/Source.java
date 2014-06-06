@@ -24,6 +24,7 @@ public abstract class Source {
     public final String path;
 
     public File (String path) {
+      if (path == null) throw new NullPointerException();
       this.path = path;
     }
 
@@ -59,6 +60,7 @@ public abstract class Source {
     public final String sourcePath;
 
     public ArchiveEntry (String archivePath, String sourcePath) {
+      if (archivePath == null || sourcePath == null) throw new NullPointerException();
       this.archivePath = archivePath;
       this.sourcePath = sourcePath;
     }
