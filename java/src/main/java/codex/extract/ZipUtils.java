@@ -7,8 +7,8 @@ package codex.extract;
 import com.sun.tools.javac.api.JavacTool;
 import com.sun.tools.javac.file.JavacFileManager;
 import com.sun.tools.javac.file.ZipArchive;
-import com.sun.tools.javac.file.ZipFileObjectFactory;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -40,13 +40,22 @@ public class ZipUtils {
       String name = entry.getName();
       name = name.substring(name.lastIndexOf("/")+1);
       if (name.endsWith(".java")) {
-        // see ZFOF docs for why this bullshit is necessary
-        files.add(ZipFileObjectFactory.newZipFileObject(arch, name, entry));
+        try {
+          files.add((ZipArchive.ZipFileObject)zfoCtor.newInstance(arch, name, entry));
+        } catch (Throwable t) {
+          t.printStackTrace(System.err);
+        }
       }
     }
     return files;
   }
 
+  // the ZipFileObject constructor has protected access, but if we extend it then javac sees that
+  // our file object is declared outside com.sun.tools.javac and wraps it in such a way that causes
+  // it to choke when javac calls JavaFileManager.isSameFile (which it does when it encounters a
+  // package-info.java file); yay for a twisty maze of bullshit
+  private static Constructor zfoCtor = ZipArchive.ZipFileObject.class.getDeclaredConstructors()[0];
+  static  { zfoCtor.setAccessible(true); }
   // public static Iterable<JavaFileObject> fileObjects (ZipFile file) {
   //   return file.stream().map(e -> new JavaFileObject() {
   //     public JavaFileObject.Kind getKind () { return JavaFileObject.Kind.SOURCE; }
