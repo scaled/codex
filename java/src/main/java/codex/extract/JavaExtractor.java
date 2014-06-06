@@ -23,6 +23,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Predicate;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
@@ -66,10 +68,16 @@ public class JavaExtractor {
     process0(objs, writer);
   }
 
-  /** Processes all {@code .java} source files in {@code files}.
-    * Metadata is emitted to {@code writer}. */
+  /** Processes all .java source files in {@code files}. Metadata is emitted to {@code writer}. */
   public void process (ZipFile file, Writer writer) throws IOException {
-    process0(ZipUtils.zipFiles(_compiler, file), writer);
+    process(file, e -> true, writer);
+  }
+
+  /** Processes all .java source files in {@code files}. Metadata is emitted to {@code writer}.
+    * @param filter a filter used to omit some entries from {@code file}.
+    */
+  public void process (ZipFile file, Predicate<ZipEntry> filter, Writer writer) throws IOException {
+    process0(ZipUtils.zipFiles(_compiler, file, filter), writer);
   }
 
   /** Enables the filtering of certain compunits from the extraction process. All compunits passed

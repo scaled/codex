@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -32,14 +33,15 @@ import javax.tools.JavaFileObject;
 
 public class ZipUtils {
 
-  public static List<JavaFileObject> zipFiles (JavacTool javac, ZipFile file) throws IOException {
+  public static List<JavaFileObject> zipFiles (JavacTool javac, ZipFile file,
+                                               Predicate<ZipEntry> filter) throws IOException {
     List<JavaFileObject> files = new ArrayList<>();
     JavacFileManager fm = (JavacFileManager)javac.getStandardFileManager(null, null, null);
     ZipArchive arch = new ZipArchive(fm, file);
     for (ZipEntry entry : file.stream().collect(Collectors.<ZipEntry>toList())) {
       String name = entry.getName();
       name = name.substring(name.lastIndexOf("/")+1);
-      if (name.endsWith(".java")) {
+      if (name.endsWith(".java") && filter.test(entry)) {
         try {
           files.add((ZipArchive.ZipFileObject)zfoCtor.newInstance(arch, name, entry));
         } catch (Throwable t) {

@@ -65,7 +65,7 @@ public class SimpleCodexTest {
     // extract.process(new ZipFile(zip), store.writer);
 
     // String zip = System.getProperty("java.home") + "/../src.zip";
-    // extract.process(new ZipFile(zip), store.writer);
+    // extract.process(new ZipFile(zip), e -> e.getName().startsWith("java"), store.writer);
 
     // System.out.println(store.defCount() + " defs.");
   }
