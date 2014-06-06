@@ -59,8 +59,12 @@ public class SimpleCodexTest {
     };
 
     extract.process(codexSources(), store.writer);
+
     // String zip = System.getProperty("user.home") +
     //   ".m2/repository/com/threerings/react/1.4/react-1.4-sources.jar";
+    // extract.process(new ZipFile(zip), store.writer);
+
+    // String zip = System.getProperty("java.home") + "/../src.zip";
     // extract.process(new ZipFile(zip), store.writer);
 
     // System.out.println(store.defCount() + " defs.");

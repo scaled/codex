@@ -7,6 +7,7 @@ package codex.extract;
 import com.sun.tools.javac.api.JavacTool;
 import com.sun.tools.javac.file.JavacFileManager;
 import com.sun.tools.javac.file.ZipArchive;
+import com.sun.tools.javac.file.ZipFileObjectFactory;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,9 +40,8 @@ public class ZipUtils {
       String name = entry.getName();
       name = name.substring(name.lastIndexOf("/")+1);
       if (name.endsWith(".java")) {
-        files.add(new ZipArchive.ZipFileObject(arch, name, entry) {
-          // constructor is protected, so we need to create an anonymous subclass, blah
-        });
+        // see ZFOF docs for why this bullshit is necessary
+        files.add(ZipFileObjectFactory.newZipFileObject(arch, name, entry));
       }
     }
     return files;
