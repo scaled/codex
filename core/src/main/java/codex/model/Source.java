@@ -98,7 +98,12 @@ public abstract class Source {
   public static Source fromString (String string) {
     int eidx = string.indexOf('!');
     if (eidx == -1) return new File(string);
-    else return new ArchiveEntry(string.substring(0, eidx), string.substring(eidx+1));
+    else {
+      String archive = string.substring(0, eidx), entry = string.substring(eidx+1);
+      // javac prepends its zip entry paths with a leading / but that's wrong wrong wrong
+      if (entry.startsWith("/")) entry = entry.substring(1);
+      return new ArchiveEntry(archive, entry);
+    }
   }
 
   /** Returns the name of the file represented by this source. */
