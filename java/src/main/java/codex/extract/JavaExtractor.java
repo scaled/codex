@@ -14,6 +14,7 @@ import com.sun.tools.javac.api.JavacTool;
 import com.sun.tools.javac.code.Types;
 import com.sun.tools.javac.util.Context;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URI;
@@ -22,6 +23,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.zip.ZipFile;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -62,6 +64,12 @@ public class JavaExtractor {
     Iterator<String> citer = codes.iterator();
     for (String file : files) objs.add(mkTestObject(file, citer.next()));
     process0(objs, writer);
+  }
+
+  /** Processes all {@code .java} source files in {@code files}.
+    * Metadata is emitted to {@code writer}. */
+  public void process (ZipFile file, Writer writer) throws IOException {
+    process0(ZipUtils.zipFiles(_compiler, file), writer);
   }
 
   private void process0 (Iterable<? extends JavaFileObject> files, Writer writer) {

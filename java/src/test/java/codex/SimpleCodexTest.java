@@ -8,6 +8,8 @@ import codex.extract.JavaExtractor;
 import codex.model.*;
 import codex.store.*;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,6 +21,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.zip.ZipFile;
 import org.junit.*;
 import static org.junit.Assert.*;
 
@@ -27,27 +30,39 @@ public class SimpleCodexTest {
   public static EphemeralStore store;
   public static JavaExtractor extract;
 
-  @BeforeClass public static void populateStore () throws IOException {
-    store = new EphemeralStore();
-    extract = new JavaExtractor();
-    // TODO: pass our classpath onto the extractor; create binary stores for the other jars?
-
+  public static List<Path> codexSources () throws IOException {
     List<Path> sources = new ArrayList<>();
     Path root = Paths.get(System.getProperty("user.dir")).resolve("../core/src/main/java");
-    if (!Files.exists(root)) return;
-
-    Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
-      public FileVisitResult visitFile (Path file, BasicFileAttributes attrs) {
-        if (!attrs.isDirectory()) {
-          String fname = file.getFileName().toString();
-          if (fname.endsWith(".java")) sources.add(file);
+    if (Files.exists(root)) {
+      Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
+        public FileVisitResult visitFile (Path file, BasicFileAttributes attrs) {
+          if (!attrs.isDirectory()) {
+            String fname = file.getFileName().toString();
+            if (fname.endsWith(".java")) sources.add(file);
+          }
+          return FileVisitResult.CONTINUE;
         }
-        return FileVisitResult.CONTINUE;
-      }
-    });
+      });
+    }
+    return sources;
+  }
 
-    extract.process(sources, store.writer);
-    // dump(store);
+  @BeforeClass public static void populateStore () throws Exception {
+    store = new EphemeralStore();
+
+    List<Path> classpath = new ArrayList<>();
+    for (URL url : ((URLClassLoader)SimpleCodexTest.class.getClassLoader()).getURLs()) {
+      classpath.add(Paths.get(url.toURI()));
+    }
+    extract = new JavaExtractor() {
+      @Override public Iterable<Path> classpath () { return classpath; }
+    };
+
+    extract.process(codexSources(), store.writer);
+    // String zip = System.getProperty("user.home") +
+    //   ".m2/repository/com/threerings/react/1.4/react-1.4-sources.jar";
+    // extract.process(new ZipFile(zip), store.writer);
+
     // System.out.println(store.defCount() + " defs.");
   }
 
@@ -60,6 +75,10 @@ public class SimpleCodexTest {
   public Codex simpleCodex () {
     return new Codex.Simple(Collections.singletonList(store));
   }
+
+  // @Test public void testDump () {
+  //   dump(store);
+  // }
 
   @Test public void testSimpleCodex () {
     Codex codex = simpleCodex();
@@ -97,17 +116,17 @@ public class SimpleCodexTest {
     }
   }
 
-  private void dump (Def def) {
+  private static void dump (Def def) {
     System.out.println(def);
     System.out.println(store.sig(def.id).map(s -> s.text).orElse("<no sig>") + " " +
                        store.source(def.id));
   }
 
-  protected void dump (ProjectStore store) {
+  protected static void dump (ProjectStore store) {
     for (Def def : store.topLevelDefs()) dump(store, def, "");
   }
 
-  protected void dump (ProjectStore store, Def def, String indent) {
+  protected static void dump (ProjectStore store, Def def, String indent) {
     System.out.print(indent);
     System.out.println(store.sig(def.id).map(s -> s.text).orElse(def.toString()));
     String mindent = indent + "  ";
