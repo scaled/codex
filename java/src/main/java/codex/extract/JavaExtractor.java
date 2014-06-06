@@ -72,6 +72,18 @@ public class JavaExtractor {
     process0(ZipUtils.zipFiles(_compiler, file), writer);
   }
 
+  /** Enables the filtering of certain compunits from the extraction process. All compunits passed
+    * to {@code process} will be used to parse and analyze the code, but only compunits for which
+    * this method returns true will be extracted. The default is to extract all compunits.
+    *
+    * This mainly exists for processing the JDK sources, where there are a zillion files, which we
+    * want to include in the compilation process, but we only want to extract metadata for the
+    * public java.* and javax.* APIs.
+    */
+  protected boolean filter (JavaFileObject compunit) {
+    return true;
+  }
+
   private void process0 (Iterable<? extends JavaFileObject> files, Writer writer) {
     try {
       List<String> opts = Lists.newArrayList("-Xjcov");
@@ -88,7 +100,9 @@ public class JavaExtractor {
 
       Context context = task.getContext();
       ExtractingScanner scanner = new ExtractingScanner(Types.instance(context));
-      for (CompilationUnitTree tree : asts) scanner.extract(tree, writer);
+      for (CompilationUnitTree tree : asts) {
+        if (filter(tree.getSourceFile())) scanner.extract(tree, writer);
+      }
 
       // annoyingly, there's no (public) way to tell the task that we're done without generating
       // .class files, so instead we have to do this reach around
