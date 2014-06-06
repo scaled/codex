@@ -32,6 +32,14 @@ import javax.tools.StandardJavaFileManager;
  */
 public class JavaExtractor {
 
+  public JavaExtractor () {
+    this(JavacTool.create());
+  }
+
+  public JavaExtractor (JavacTool compiler) {
+    _compiler = compiler;
+  }
+
   /** Provides the classpath used by the compiler. */
   public Iterable<Path> classpath () { return Collections.emptyList(); }
 
@@ -94,5 +102,5 @@ public class JavaExtractor {
     };
   }
 
-  private JavacTool _compiler = JavacTool.create();
+  private final JavacTool _compiler;
 }
