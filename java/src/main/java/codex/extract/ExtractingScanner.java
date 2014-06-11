@@ -46,6 +46,10 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   @Override public Void visitCompilationUnit (CompilationUnitTree node, Writer writer) {
     JCCompilationUnit unit = (JCCompilationUnit)node;
     _unit.push(unit);
+    if (unit.packge == null) {
+      System.err.println("Null package? " + unit); // TODO
+      return null;
+    }
     String pname = unit.packge.toString();
     _id = _id.plus(pname);
     int offset = _text.indexOf(pname, unit.pos);
