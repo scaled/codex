@@ -1,0 +1,2 @@
+depend: git:https://github.com/scaled/codex.git#core
+depend: jdk:${java.home}/../lib/tools.jar # TODO
