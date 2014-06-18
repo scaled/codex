@@ -5,5 +5,4 @@ descrip: A framework for grokking code.
  weburl: https://github.com/scaled/codex/
 license: New BSD
  module: core
- module: leveldb
  module: java

@@ -55,7 +55,6 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     int offset = _text.indexOf(pname, unit.pos);
     writer.openDef(_id, pname, Kind.MODULE, Flavor.NONE, true, offset, 0, _text.length());
     writer.emitSig(pname);
-    writer.commitDef();
     super.visitCompilationUnit(node, writer);
     writer.closeDef();
     _id = _id.parent;
@@ -93,7 +92,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
     // we allow the name to be "" for anonymous classes so that they can be properly filtered
     // in the user interface; we eventually probably want to be more explicit about this
-    writer.openDef(_id, name, Kind.TYPE, flavor, isPub(tree.mods.flags), start,
+    writer.openDef(_id, name, Kind.TYPE, flavor, isExp(tree.mods.flags), start,
                    treeStart, tree.getEndPosition(_unit.peek().endPositions));
 
     // emit supertype relations
@@ -123,7 +122,6 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // emit docs
     _doc.push(findDoc(treeStart).emit(writer));
 
-    writer.commitDef();
     super.visitClass(node, writer);
     writer.closeDef();
 
@@ -151,7 +149,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       else flavor = Flavor.METHOD;
 
       // interface methods are specially defined to always be public
-      boolean isPub = hasFlag(_class.peek().mods.flags, Flags.INTERFACE) || isPub(tree.mods.flags);
+      boolean isExp = hasFlag(_class.peek().mods.flags, Flags.INTERFACE) || isExp(tree.mods.flags);
       String name = isCtor ? _class.peek().name.toString() : tree.name.toString();
 
       // the id for a method includes signature information
@@ -160,7 +158,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
       int treeStart = tree.getStartPosition();
       int offset = _text.indexOf(name, treeStart);
-      writer.openDef(_id, name, Kind.FUNC, flavor, isPub, offset,
+      writer.openDef(_id, name, Kind.FUNC, flavor, isExp, offset,
                      treeStart, tree.getEndPosition(_unit.peek().endPositions));
 
       if (tree.sym != null) emitSuperMethod(tree.sym, writer);
@@ -170,9 +168,6 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       DefDoc doc = findDoc(treeStart);
       doc.emit(writer);
       _doc.push(doc);
-      writer.commitDef();
-
-      writer.commitDef();
       super.visitMethod(node, writer);
       writer.closeDef();
 
@@ -203,7 +198,6 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     DefDoc curdoc = _doc.peek();
     if (curdoc != null) curdoc.emitParam("<" + name + ">", writer);
 
-    writer.commitDef();
     super.visitTypeParameter(node, writer);
     writer.closeDef();
 
@@ -225,7 +219,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     boolean isParam = hasFlag(tree.mods, Flags.PARAMETER);
     if (isField) flavor = hasFlag(tree.mods, Flags.STATIC) ? Flavor.STATIC_FIELD : Flavor.FIELD;
     else flavor = isParam ? Flavor.PARAM : Flavor.LOCAL;
-    boolean isPub = isField && isPub(tree.mods.flags);
+    boolean isExp = isField && isExp(tree.mods.flags);
 
     String name = tree.name.toString();
     _id = _id.plus(name);
@@ -238,7 +232,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // add a symtab mapping for this vardef
     if (tree.sym != null) _symtab.peek().put(tree.sym, _id);
 
-    writer.openDef(_id, name, Kind.VALUE, flavor, isPub, start,
+    writer.openDef(_id, name, Kind.VALUE, flavor, isExp, start,
                    bodyStart, tree.getEndPosition(_unit.peek().endPositions));
 
     // emit our signature
@@ -249,7 +243,6 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // otherwise try to extract its documentation from the method javadoc
     else if (isParam) _doc.peek().emitParam(name, writer);
 
-    writer.commitDef();
     // if this is an enum field, don't call super visit as that will visit a bunch of synthetic
     // mishmash which we don't want to emit defs for
     if (!hasFlag(tree.mods, Flags.ENUM)) super.visitVariable(node, writer);
@@ -549,7 +542,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
   private boolean hasFlag (JCModifiers mods, long flag) { return (mods.flags & flag) != 0; }
   private boolean hasFlag (long flags, long flag) { return (flags & flag) != 0; }
-  private boolean isPub (long flags) { return hasFlag(flags, Flags.PUBLIC); }
+  private boolean isExp (long flags) { return !hasFlag(flags, Flags.PRIVATE); }
   // private def flagsToAccess (flags :Long) =
   //   if () "public"
   //   else if (hasFlag(flags, Flags.PROTECTED)) "protected"

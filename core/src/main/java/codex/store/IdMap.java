@@ -5,7 +5,9 @@
 package codex.store;
 
 import codex.model.Ref;
-import com.carrotsearch.hppc.IntOpenHashSet;
+import com.google.common.base.Preconditions;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Aids with assigning ids to defs. Also helps with the incremental update of a set of defs,
@@ -17,26 +19,28 @@ public class IdMap {
   public static final int DEFS_PER_UNIT = 32768;
 
   /** Extracts the unit id from {@code defId}. */
-  public static int toUnitId (int defId) {
+  public static long toUnitId (long defId) {
     return defId / DEFS_PER_UNIT;
   }
 
   /** The id of the unit for which this map provides def ids. */
   public final int unitId;
 
-  /** Creates a map which will assign def ids starting from {@code baseId}. */
+  /** Creates a map which will assign def ids for the comp unit identified by {@code unitId}.
+    * @param tree the ref tree in which exported refs are resolved. */
   public IdMap (RefTree tree, int unitId) {
-    if (unitId == 0) throw new IllegalArgumentException("Unit id must be non-zero");
+    Preconditions.checkArgument(unitId != 0, "Unit id must be non-zero");
     this.unitId = unitId;
     _tree = tree;
-    _nextDefId = unitId * DEFS_PER_UNIT;
+    _nextDefId = (long)(unitId * DEFS_PER_UNIT);
   }
 
-  /** Resolves the supplied ref, assigning it a new id in this compilation unit, if needed. */
-  public synchronized int resolve (Ref.Global ref) {
-    int assignId = _nextDefId;
-    int id = _tree.resolve(ref, assignId);
-    if (id == assignId) {
+  /** Resolves the supplied ref, assigning it a new id in this compilation unit, if needed.
+    * @param exported whether or not the ref is visible beyond this compilation unit. */
+  public synchronized Long resolve (Ref.Global ref) {
+    Long assignId = _nextDefId;
+    Long id = _tree.resolve(ref, assignId);
+    if (id.equals(assignId)) {
       _ids.add(id);
       _nextDefId += 1;
     }
@@ -45,8 +49,8 @@ public class IdMap {
   }
 
   /** Returns a copy of all ref ids assigned for this compilation unit. */
-  public synchronized IntOpenHashSet copyIds () {
-    return new IntOpenHashSet(_ids);
+  public synchronized Set<Long> copyIds () {
+    return new HashSet<>(_ids);
   }
 
   /** Snapshots the current id set in preparation for reindexing our compilation unit. Should be
@@ -57,15 +61,15 @@ public class IdMap {
 
   /** Purges any ids that were not re-resolved since the last call to {@link #snapshot}.
     * @return the set of purged ids. */
-  public synchronized IntOpenHashSet purge () {
-    IntOpenHashSet toPurge = _toPurge;
+  public synchronized Set<Long> purge () {
+    Set<Long> toPurge = _toPurge;
     _toPurge = null;
     _ids.removeAll(toPurge);
     return toPurge;
   }
 
   private final RefTree _tree;
-  private final IntOpenHashSet _ids = new IntOpenHashSet();
-  private IntOpenHashSet _toPurge = new IntOpenHashSet();
-  private int _nextDefId;
+  private final Set<Long> _ids = new HashSet<>();
+  private Set<Long> _toPurge = new HashSet<>();
+  private Long _nextDefId;
 }

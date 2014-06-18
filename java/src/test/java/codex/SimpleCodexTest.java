@@ -27,7 +27,7 @@ import static org.junit.Assert.*;
 
 public class SimpleCodexTest {
 
-  public static EphemeralStore store;
+  public static MapDBStore store;
   public static JavaExtractor extract;
 
   public static List<Path> codexSources () throws IOException {
@@ -48,7 +48,7 @@ public class SimpleCodexTest {
   }
 
   @BeforeClass public static void populateStore () throws Exception {
-    store = new EphemeralStore();
+    store = new MapDBStore();
 
     List<Path> classpath = new ArrayList<>();
     for (URL url : ((URLClassLoader)SimpleCodexTest.class.getClassLoader()).getURLs()) {
@@ -66,8 +66,6 @@ public class SimpleCodexTest {
 
     // String zip = System.getProperty("java.home") + "/../src.zip";
     // extract.process(new ZipFile(zip), e -> e.getName().startsWith("java"), store.writer);
-
-    // System.out.println(store.defCount() + " defs.");
   }
 
   @AfterClass public static void clearStore () {
@@ -80,9 +78,15 @@ public class SimpleCodexTest {
     return new Codex.Simple(Collections.singletonList(store));
   }
 
-  // @Test public void testDump () {
-  //   dump(store);
+  // @Test public void testSize () {
+  //   System.out.println(store.defCount() + " defs.");
+  //   System.out.println(store.nameCount(false) + " names.");
+  //   System.out.println(store.nameCount(true) + " exported names.");
   // }
+
+  @Test public void testDump () {
+    dump(store);
+  }
 
   @Test public void testSimpleCodex () {
     Codex codex = simpleCodex();

@@ -34,7 +34,6 @@
 
   <modules>
     <module>core</module>
-    <module>leveldb</module>
     <module>java</module>
     <!-- <module>scala</module> -->
   </modules>

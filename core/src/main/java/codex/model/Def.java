@@ -5,6 +5,7 @@
 package codex.model;
 
 import codex.store.ProjectStore;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -15,18 +16,18 @@ public final class Def implements Element {
   /** The project from which this def originates. */
   public final ProjectStore project;
 
-  /** The unique (within the def's project) id of this def. */
-  public final int id;
+  /** The unique (within the def's project) id of this def. Note: this is a boxed long simply to
+    * avoid repeated boxing and unboxing. It will never be null. */
+  public final Long id;
 
-  /** The id of the def that encloses this def, or 0 if it unenclosed. This will always be a another
-    * def in the same project. */
-  public final int outerId;
+  /** The id of the def that encloses this def, or null if it unenclosed. This will always be a
+    * another def in the same project. */
+  public final Long outerId;
 
   /** The kind of the def. */
   public final Kind kind;
 
-  /** Whether or not this def is exported outside the scope of its enclosing element. This is not
-    * used for analysis, but rather to efficiently filter defs during searches . */
+  /** Whether or not this def is visible outside its compilation unit. */
   public final boolean exported;
 
   /** The name defined by this def. */
@@ -35,7 +36,7 @@ public final class Def implements Element {
   /** The character offset in the source text at which this def occurs. */
   public final int offset;
 
-  public Def (ProjectStore project, int id, int outerId, Kind kind, boolean exported,
+  public Def (ProjectStore project, Long id, Long outerId, Kind kind, boolean exported,
               String name, int offset) {
     this.project = project;
     this.id = id;
@@ -79,9 +80,9 @@ public final class Def implements Element {
 
   /** Returns true if this def is structurally equal to {@code other}. */
   public boolean equals (Def other) {
-    return (project == other.project && id == other.id && outerId == other.outerId &&
-            kind == other.kind && exported == other.exported && name.equals(other.name) &&
-            offset == other.offset);
+    return (project == other.project && id.equals(other.id) &&
+            Objects.equals(outerId, other.outerId) && kind == other.kind &&
+            exported == other.exported && name.equals(other.name) && offset == other.offset);
   }
 
   @Override public Ref ref () { return Ref.local(project, id); }
@@ -90,7 +91,7 @@ public final class Def implements Element {
   @Override public Kind kind () { return kind; }
 
   @Override public int hashCode () {
-    return project.hashCode() ^ id ^ outerId;
+    return project.hashCode() ^ id.intValue();
   }
 
   @Override public boolean equals (Object other) {
@@ -98,7 +99,7 @@ public final class Def implements Element {
   }
 
   @Override public String toString () {
-    return String.format("Def(%s, %d, %d, %s, %s, %s, %d)",
+    return String.format("Def(%s, %s, %s, %s, %s, %s, %d)",
                          project, id, outerId, kind, exported, name, offset);
   }
 

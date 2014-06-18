@@ -1,2 +1,0 @@
-depend: git:https://github.com/scaled/codex.git#core
-depend: mvn:org.iq80.leveldb:leveldb:0.7

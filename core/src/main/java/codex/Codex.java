@@ -6,8 +6,6 @@ package codex;
 
 import codex.model.*;
 import codex.store.ProjectStore;
-import com.carrotsearch.hppc.IntObjectMap;
-import com.carrotsearch.hppc.IntObjectOpenHashMap;
 import com.google.common.collect.Lists;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -131,14 +129,6 @@ public abstract class Codex {
       }
       return Optional.empty();
     }
-  }
-
-  /**
-   * Returns a global reference for {@code def}.
-   * @throws NoSuchElementException if def did not originate from one of our project stores.
-   */
-  public Ref.Global ref (Def def) {
-    return def.project.ref(def.id);
   }
 
   /**

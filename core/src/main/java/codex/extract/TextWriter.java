@@ -72,7 +72,6 @@ public class TextWriter extends Writer {
     emit("use", "offset", offset);
   }
 
-  @Override public void commitDef () {} // nada
   @Override public void closeDef () {
     _indent -= 1;
   }

@@ -20,14 +20,14 @@ public abstract class Ref {
     public final ProjectStore project;
 
     /** The integer id of the def in the project. */
-    public final int defId;
+    public final Long defId;
 
     public boolean equals (Local other) {
-      return project == other.project && defId == other.defId;
+      return project == other.project && defId.equals(other.defId);
     }
 
     @Override public int hashCode () {
-      return project.hashCode() ^ defId;
+      return project.hashCode() ^ defId.intValue();
     }
 
     @Override public boolean equals (Object other) {
@@ -38,7 +38,7 @@ public abstract class Ref {
       return project + ":" + defId;
     }
 
-    private Local (ProjectStore project, int defId) {
+    private Local (ProjectStore project, Long defId) {
       this.project = project;
       this.defId = defId;
     }
@@ -106,7 +106,7 @@ public abstract class Ref {
   }
 
   /** Returns a local id for the specified def in the specified project. */
-  public static Ref local (ProjectStore project, int defId) {
+  public static Ref local (ProjectStore project, Long defId) {
     return new Local(project, defId);
   }
 

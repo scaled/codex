@@ -5,6 +5,7 @@
 package codex.store;
 
 import codex.Codex;
+import codex.extract.Writer;
 import codex.model.*;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -13,12 +14,18 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * Contains metadata for a single project.
+ * Contains metadata for a single project. NOTE: the use of {@code Long} in this API does not mean
+ * that null is an allowed argument. It is to avoid unnecessary boxing and unboxing of long ids.
  */
 public abstract class ProjectStore implements AutoCloseable {
 
   /**
-   * Returns the list of all top-level defs in this project.
+   * Returns a writer that can be used to update this project.
+   */
+  public abstract Writer writer ();
+
+  /**
+   * Returns all top-level defs in this project.
    */
   public abstract Iterable<Def> topLevelDefs ();
 
@@ -28,7 +35,7 @@ public abstract class ProjectStore implements AutoCloseable {
   public abstract boolean isIndexed (Source source);
 
   /**
-   * Returns the list of all defs in the specified source file.
+   * Returns all defs in the specified source file.
    */
   public abstract Iterable<Def> sourceDefs (Source source);
 
@@ -41,20 +48,20 @@ public abstract class ProjectStore implements AutoCloseable {
    * Returns the def with id {@code defId}.
    * @throws NoSuchElementException if no def exists with that id.
    */
-  public abstract Def def (int defId);
+  public abstract Def def (Long defId);
 
   /**
    * Returns a global ref for {@code defId}.
    * @throws NoSuchElementException if no def exists with that id.
    */
-  public abstract Ref.Global ref (int defId);
+  public abstract Ref.Global ref (Long defId);
 
   /**
    * Returns all defs nested immediately inside {@code defId}. This does not return defs nested two
    * or more levels deep.
    * @throws NoSuchElementException if no def exists with that id.
    */
-  public abstract List<Def> memberDefs (int defId);
+  public abstract Iterable<Def> memberDefs (Long defId);
 
   /**
    * Returns all uses nested immediately inside {@code defId}. This does not return uses nested
@@ -62,18 +69,18 @@ public abstract class ProjectStore implements AutoCloseable {
    * body of {@code defId}.
    * @throws NoSuchElementException if no def exists with that id.
    */
-  public abstract List<Use> uses (int defId);
+  public abstract List<Use> uses (Long defId);
 
   /** Returns the signature for {@code defId}. */
-  public abstract Optional<Sig> sig (int defId);
+  public abstract Optional<Sig> sig (Long defId);
 
   /** Returns the documentation for {@code defId}. */
-  public abstract Optional<Doc> doc (int defId);
+  public abstract Optional<Doc> doc (Long defId);
 
   /**
    * Returns the source from which {@code defId} originates.
    */
-  public abstract Source source (int defId);
+  public abstract Source source (Long defId);
 
   /**
    * Adds all defs to {@code into} that match {@code query}.
