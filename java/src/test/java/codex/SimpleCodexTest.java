@@ -84,9 +84,9 @@ public class SimpleCodexTest {
   //   System.out.println(store.nameCount(true) + " exported names.");
   // }
 
-  @Test public void testDump () {
-    dump(store);
-  }
+  // @Test public void testDump () {
+  //   dump(store);
+  // }
 
   @Test public void testSimpleCodex () {
     Codex codex = simpleCodex();
