@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -25,6 +26,7 @@ import org.mapdb.BTreeMap;
 import org.mapdb.Bind;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
+import org.mapdb.Fun;
 import org.mapdb.Serializer;
 
 public class MapDBStore extends ProjectStore {
@@ -108,9 +110,10 @@ public class MapDBStore extends ProjectStore {
 
         void storeDef (DefInfo inf) {
           Def def = toDef(inf.outer.defId, inf);
+          _defs.put(def.id, def);
           newSourceIds.add(def.id);
           if (def.outerId == null) _topDefs.add(def.id);
-          _defs.put(def.id, def);
+          _indices.get(def.kind).add(Fun.t2(def.name.toLowerCase(), def.id));
         }
 
         void storeData (DefInfo inf) {
@@ -123,6 +126,8 @@ public class MapDBStore extends ProjectStore {
             List<Use> uses = resolveUses(inf.doc.uses);
             _defDoc.put(inf.defId, new Doc(inf.doc.offset, inf.doc.length, uses));
           }
+          if (inf.uses == null) _defUses.remove(inf.defId);
+          else _defUses.put(inf.defId, resolveUses(inf.uses));
         }
 
         void storeDefs (Iterable<DefInfo> defs) {
@@ -165,9 +170,8 @@ public class MapDBStore extends ProjectStore {
         public void run () {
           // first assign ids to all the defs and store the basic def data
           storeDefs(topDef.defs);
-
           // then go through and store additional data like sigs, docs and uses; now that all the
-          // defs are stored and ided, we can resolve many use refs to more compact local refs
+          // defs are stored and IDed, we can resolve many use refs to more compact local refs
           storeDatas(topDef.defs);
         }
       }.run();
@@ -261,27 +265,23 @@ public class MapDBStore extends ProjectStore {
   }
 
   @Override public void find (Codex.Query query, boolean expOnly, List<Def> into) {
-    // for (Kind kind : query.kinds) {
-    //   TreeMultimap<String,Def> index = _indices.get(kind);
-    //   // if we're doing an exact match, just look up name directly
-    //   if (!query.prefix) add(index.get(query.name), expOnly, into);
-    //   else {
-    //     // if we're doing a prefix match, iterate over the index starting from the first key that's
-    //     // >= name, and stop when we reach a key that no longer starts with our prefix
-    //     String pre = query.name;
-    //     for (Map.Entry<String,Collection<Def>> entry : index.asMap().tailMap(pre).entrySet()) {
-    //       if (!entry.getKey().startsWith(pre)) break;
-    //       add(entry.getValue(), expOnly, into);
-    //     }
-    //   }
-    // }
+    boolean pre = query.prefix;
+    String name = query.name;
+    Fun.Tuple2<String,Long> lowKey = Fun.t2(name, null);
+    for (Kind kind : query.kinds) {
+      NavigableSet<Fun.Tuple2<String,Long>> index = _indices.get(kind);
+      for (Fun.Tuple2<String,Long> ent : _indices.get(kind).tailSet(lowKey)) {
+        if ((pre && !ent.a.startsWith(name)) || (!pre && !ent.a.equals(name))) break;
+        Def def = _defs.get(ent.b);
+        if (def == null) continue; // index can contain stale entries
+        // TODO: validate that def matches query (index may have stale link to reused def id)
+        if (!expOnly || def.exported) into.add(def);
+      }
+    }
   }
 
-  // private void add (Collection<Def> defs, boolean expOnly, List<Def> into) {
-  //   for (Def def : defs) if (!expOnly || def.exported) into.add(def);
-  // }
-
   private void removeDefs (Set<Long> defIds) {
+    // TODO: load all these defs and remove them from the indexes?
     _projectRefs.remove(defIds);
     _topDefs.removeAll(defIds);
     _defs.keySet().removeAll(defIds);
@@ -304,27 +304,31 @@ public class MapDBStore extends ProjectStore {
   private MapDBStore (DB db) {
     _db = db;
 
-    // MapDB insists on serializing they key and value serializers into a catalog file, so we have
-    // to do this hackery to ensure that our serialized serializers get the right store reference
-    IO.store = this;
     BTreeKeySerializer<Long> longSz = BTreeKeySerializer.ZERO_OR_POSITIVE_LONG;
     _srcById = createTreeMap("srcById", longSz, Serializer.STRING);
     _srcToId = new HashMap<>();
     Bind.mapInverse(_srcById, _srcToId);
     _srcDefs = createTreeMap("srcDefs", BTreeKeySerializer.STRING, IO.idsSz);
     _topDefs = _db.createTreeSet("topDefs").serializer(longSz).makeOrGet();
-    _defs    = createTreeMap("defs", longSz, IO.defSz);
-    _defSig  = createTreeMap("defSig", longSz, IO.sigSz);
-    _defDoc  = createTreeMap("defDoc", longSz, IO.docSz);
+
+    // MapDB insists on serializing they key and value serializers into a catalog file, so we have
+    // to do this hackery to ensure that our serialized serializers get the right store reference
+    IO.store = this;
+    _defs    = createTreeMap("defs",    longSz, IO.defSz);
+    _defSig  = createTreeMap("defSig",  longSz, IO.sigSz);
+    _defDoc  = createTreeMap("defDoc",  longSz, IO.docSz);
     _defMems = createTreeMap("defMems", longSz, IO.idsSz);
     _defUses = createTreeMap("defUses", longSz, IO.usesSz);
     IO.store = null;
 
+    _indices = new HashMap<>();
+    for (Kind kind : Kind.values()) {
+      _indices.put(kind, _db.createTreeSet("idx"+kind).serializer(
+        BTreeKeySerializer.TUPLE2).makeOrGet());
+    }
+
     // TODO
     _projectRefs = new EphemeralRefTree();
-
-    // _indices = new HashMap<>();
-    // for (Kind kind : Kind.values()) _indices.put(kind, TreeMultimap.create());
   }
 
   protected <K,V> BTreeMap<K,V> createTreeMap (String name, BTreeKeySerializer<K> keySz,
@@ -344,6 +348,5 @@ public class MapDBStore extends ProjectStore {
   private final BTreeMap<Long,Doc> _defDoc;
   private final BTreeMap<Long,Set<Long>> _defMems;
   private final BTreeMap<Long,List<Use>> _defUses;
-
-  // private final Map<Kind,TreeMultimap<String,Def>> _indices;
+  private final Map<Kind,NavigableSet<Fun.Tuple2<String,Long>>> _indices;
 }
