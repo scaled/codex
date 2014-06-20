@@ -212,6 +212,12 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     return null;
   }
 
+  // @Override public Void visitLambdaExpression (LambdaExpressionTree node, Writer writer) {
+  //   super.visitLambdaExpression(node, writer);
+  //   JCLambda tree = (JCLambda)node;
+  //   return null;
+  // }
+
   @Override public Void visitVariable (VariableTree node, Writer writer) {
     JCVariableDecl tree = (JCVariableDecl)node;
     Flavor flavor;
@@ -243,11 +249,23 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // otherwise try to extract its documentation from the method javadoc
     else if (isParam) _doc.peek().emitParam(name, writer);
 
+    // if this vardecl is a lamdba parameter with implicit type, we need to avoid scanning the
+    // type node because it is secretly populated by javac, but does not actually exist in the
+    // source; but by the time we get into that node we have no way of telling that's what's
+    // going on, so we never want to get there
+    Tree parent = getCurrentPath().getParentPath().getLeaf();
+    if (parent.getKind() == Tree.Kind.LAMBDA_EXPRESSION &&
+        ((JCLambda)parent).paramKind == JCLambda.ParameterKind.IMPLICIT) {
+      scan(node.getModifiers(), writer);
+      // skip type
+      scan(node.getNameExpression(), writer);
+      scan(node.getInitializer(), writer);
+    }
     // if this is an enum field, don't call super visit as that will visit a bunch of synthetic
     // mishmash which we don't want to emit defs for
-    if (!hasFlag(tree.mods, Flags.ENUM)) super.visitVariable(node, writer);
-    writer.closeDef();
+    else if (!hasFlag(tree.mods, Flags.ENUM)) super.visitVariable(node, writer);
 
+    writer.closeDef();
     _id = _id.parent;
     return null;
   }
@@ -292,18 +310,15 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   @Override public Void visitMemberSelect (MemberSelectTree node, Writer writer) {
     super.visitMemberSelect(node, writer);
     JCFieldAccess tree = (JCFieldAccess)node;
-    // make sure we're not looking at an import
-    if (_class.peek() != null && tree.sym != null) {
+    if (tree.sym != null) {
       String name = tree.name.toString();
-      // TODO: is there a better way to get the start position of the selected name?
-      int selend = tree.getStartPosition() + tree.selected.toString().length();
-      int offset = _text.indexOf(name, selend);
-      // TODO: there's some weirdness with lambdas here: when we see (f -> f...) the use of f has a
-      // tree name that is the fully qualified type name of f, so if f was java.lang.reflect.Method
-      // that's what we see in the AST, rather than something like JCIdentifier(f)
-      if (offset == -1) System.err.println(
-        String.format("Unable to find use in member select %s (%s @ %d / %d %s)",
-                      tree, name, selend, tree.getStartPosition(), tree.selected.toString()));
+      int selpos = tree.getPreferredPosition();
+      int offset = _text.indexOf(name, selpos);
+      // TODO: I think this is still happening in some circumstances...
+      if (offset == -1) {
+        System.err.printf("Unable to find use in member select %s (%s @ %d / %d %s)\n",
+                          tree, name, selpos, tree.getStartPosition(), tree.selected.toString());
+      }
       else writer.emitUse(targetForSym(name, tree.sym), name, kindForSym(tree.sym), offset);
     }
     return null;

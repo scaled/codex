@@ -34,6 +34,25 @@ public class JavaExtractorTest {
     JavaExtractor ex = new JavaExtractor();
     StringWriter out = new StringWriter();
     ex.process("TestA.java", TESTA, new TextWriter(new PrintWriter(out)));
-    System.out.println(out.toString());
+    // System.out.println(out.toString());
+  }
+
+  public final String TESTLAM = Joiner.on("\n").join(
+    "public class TestLam {",
+    "    public static interface Fn {",
+    "        int apply (String value);",
+    "    }",
+    "    public static void apply (Fn fn) {}",
+    "    public static void main (String[] args) {",
+    "        apply(v -> v.length());",
+    "        apply((String q) -> q.length());",
+    "    }",
+    "}");
+
+  @Test public void testLambdaParams () {
+    JavaExtractor ex = new JavaExtractor();
+    StringWriter out = new StringWriter();
+    ex.process("TestLam.java", TESTLAM, new TextWriter(new PrintWriter(out)));
+    // System.out.println(out.toString());
   }
 }
