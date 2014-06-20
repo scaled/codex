@@ -17,6 +17,10 @@ public class TextWriter extends Writer {
     _out = out;
   }
 
+  @Override public void openSession () {
+    // nada
+  }
+
   @Override public void openUnit (Source source) {
     emit("unit", source);
     _indent += 1;
@@ -77,6 +81,9 @@ public class TextWriter extends Writer {
   }
   @Override public void closeUnit () {
     _indent -= 1;
+  }
+  @Override public void closeSession () {
+    // nada
   }
 
   private PrintWriter emit (String key) {
