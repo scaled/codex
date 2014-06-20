@@ -46,6 +46,18 @@ public class MapDBStore extends ProjectStore {
   /** A writer that can be used to write metadata to this store. Handles incremental updates. */
   public final Writer writer = new BatchWriter() {
 
+    // use this to commit every 100 compilation units; keeps WAL from getting too big
+    private int _writeCount;
+    private static final int COMMIT_EVERY = 100;
+
+    @Override public void openSession () {
+      _writeCount = 0;
+    }
+
+    @Override public void closeSession () {
+      _db.commit();
+    }
+
     @Override protected void storeUnit (Source source, DefInfo topDef) {
       long indexed = System.currentTimeMillis(); // note the time
 
@@ -177,7 +189,11 @@ public class MapDBStore extends ProjectStore {
       if (!oldSourceIds.isEmpty()) removeDefs(oldSourceIds);
       _srcDefs.put(unitId, newSourceIds);
       _srcInfo.put(unitId, new IO.SourceInfo(srcKey, indexed));
-      _db.commit();
+
+      if (++_writeCount > COMMIT_EVERY) {
+        _db.commit();
+        _writeCount = 0;
+      }
 
       System.err.println(srcKey + " has " + newSourceIds.size() + " defs");
     }
@@ -192,7 +208,12 @@ public class MapDBStore extends ProjectStore {
   }
 
   public MapDBStore (File store) {
-    this(DBMaker.newFileDB(store).closeOnJvmShutdown());
+    this(DBMaker.newFileDB(store).
+         mmapFileEnableIfSupported().
+         cacheDisable().
+         compressionEnable().
+         asyncWriteEnable().
+         closeOnJvmShutdown());
   }
 
   /**
@@ -209,6 +230,14 @@ public class MapDBStore extends ProjectStore {
     _defUses.clear();
     _defSig.clear();
     _defDoc.clear();
+  }
+
+  public int defCount () {
+    return _defs.size();
+  }
+
+  public int nameCount () {
+    return _refsById.size();
   }
 
   @Override public void close () {
