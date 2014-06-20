@@ -9,6 +9,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -26,6 +28,10 @@ public abstract class Source {
     public File (String path) {
       if (path == null) throw new NullPointerException();
       this.path = path;
+    }
+
+    @Override public long lastModified () throws IOException {
+      return Files.getLastModifiedTime(Paths.get(path)).toMillis();
     }
 
     @Override public Reader reader () throws IOException {
@@ -63,6 +69,10 @@ public abstract class Source {
       if (archivePath == null || sourcePath == null) throw new NullPointerException();
       this.archivePath = archivePath;
       this.sourcePath = sourcePath;
+    }
+
+    @Override public long lastModified () throws IOException {
+      return Files.getLastModifiedTime(Paths.get(archivePath)).toMillis();
     }
 
     @Override public Reader reader () throws IOException {
@@ -118,6 +128,9 @@ public abstract class Source {
     int didx = path.lastIndexOf('.');
     return (didx == -1) ? "" : path.substring(didx+1);
   }
+
+  /** Returns the last modified time of the source file. */
+  public abstract long lastModified () throws IOException;
 
   /** Creates a reader that can be used to read the contents of this source. Note: this reader is
     * not buffered, wrap it in a {@link BufferedReader} as appropriate. */
