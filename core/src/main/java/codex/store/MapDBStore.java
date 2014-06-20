@@ -45,22 +45,17 @@ public class MapDBStore extends ProjectStore {
   /** A writer that can be used to write metadata to this store. Handles incremental updates. */
   public final Writer writer = new BatchWriter() {
 
-    protected Long unitId (String srcKey) {
-      Long unitId = _srcToId.get(srcKey);
-      if (unitId == null) {
-        unitId = _srcById.size()+1L;
-        _srcById.put(unitId, srcKey); // _srcToId is auto-updated
-      }
-      return unitId;
-    }
+    @Override protected void storeUnit (Source source, DefInfo topDef) {
+      long indexed = System.currentTimeMillis(); // note the time
 
-    protected void storeUnit (Source source, DefInfo topDef) {
       // resolve the unit id for this source
       String srcKey = source.toString();
-      Long unitId = unitId(srcKey);
+      Long uId = _srcToId.get(srcKey);
+      if (uId == null) _srcToId.put(srcKey, uId = _srcToId.size()+1L);
+      Long unitId = uId;
 
-      // TODO: load the ids of existing defs in this source
-      Set<Long> osIds = _srcDefs.get(srcKey);
+      // load the ids of existing defs in this source
+      Set<Long> osIds = _srcDefs.get(unitId);
       Set<Long> oldSourceIds = (osIds == null) ? new HashSet<>() : osIds;
       Set<Long> newSourceIds = new HashSet<>();
 
@@ -179,7 +174,9 @@ public class MapDBStore extends ProjectStore {
       // filter the reused source ids from the old source ids and delete any that remain
       oldSourceIds.removeAll(newSourceIds);
       if (!oldSourceIds.isEmpty()) removeDefs(oldSourceIds);
-      _srcDefs.put(srcKey, newSourceIds);
+      _srcDefs.put(unitId, newSourceIds);
+      _srcInfo.put(unitId, new IO.SourceInfo(srcKey, indexed));
+      System.err.println(srcKey + " has " + newSourceIds.size() + " defs");
     }
   };
 
@@ -196,7 +193,8 @@ public class MapDBStore extends ProjectStore {
    */
   public void clear () {
     _projectRefs.clear();
-    _srcById.clear();
+    _srcToId.clear();
+    _srcInfo.clear();
     _srcDefs.clear();
     _topDefs.clear();
     _defs.clear();
@@ -218,14 +216,15 @@ public class MapDBStore extends ProjectStore {
     return defs(null, _topDefs);
   }
 
-  @Override public boolean isIndexed (Source source) {
-    return _srcDefs.containsKey(source.toString());
+  @Override public long lastIndexed (Source source) {
+    IO.SourceInfo info = _srcInfo.get(source.toString());
+    return info == null ? 0L : info.indexed;
   }
 
   @Override public Iterable<Def> sourceDefs (Source source) {
-    Set<Long> ids = _srcDefs.get(source.toString());
-    if (ids == null) throw new IllegalArgumentException("Unknown source " + source);
-    return Iterables.transform(ids, id -> _defs.get(id));
+    Long unitId = _srcToId.get(source.toString());
+    if (unitId == null) throw new IllegalArgumentException("Unknown source " + source);
+    return Iterables.transform(_srcDefs.get(unitId), id -> _defs.get(id));
   }
 
   @Override public Optional<Def> def (Ref.Global ref) {
@@ -261,7 +260,9 @@ public class MapDBStore extends ProjectStore {
   }
 
   @Override public Source source (Long defId) {
-    return Source.fromString(reqdef(defId, _srcById.get(toUnitId(defId))));
+    IO.SourceInfo info = _srcInfo.get(toUnitId(defId));
+    if (info == null) throw new IllegalArgumentException("No source for def " + defId);
+    return Source.fromString(info.source);
   }
 
   @Override public void find (Codex.Query query, boolean expOnly, List<Def> into) {
@@ -281,7 +282,8 @@ public class MapDBStore extends ProjectStore {
   }
 
   private void removeDefs (Set<Long> defIds) {
-    // TODO: load all these defs and remove them from the indexes?
+    System.err.println("removeDefs(" + defIds + ")");
+    // TODO: only remove exported defs from projectRefs
     _projectRefs.remove(defIds);
     _topDefs.removeAll(defIds);
     _defs.keySet().removeAll(defIds);
@@ -289,6 +291,7 @@ public class MapDBStore extends ProjectStore {
     _defUses.keySet().removeAll(defIds);
     _defSig.keySet().removeAll(defIds);
     _defDoc.keySet().removeAll(defIds);
+    // TODO: load all these defs and remove them from the indexes?
   }
 
   private Iterable<Def> defs (Long defId, Iterable<Long> defIds) {
@@ -305,10 +308,10 @@ public class MapDBStore extends ProjectStore {
     _db = db;
 
     BTreeKeySerializer<Long> longSz = BTreeKeySerializer.ZERO_OR_POSITIVE_LONG;
-    _srcById = createTreeMap("srcById", longSz, Serializer.STRING);
-    _srcToId = new HashMap<>();
-    Bind.mapInverse(_srcById, _srcToId);
-    _srcDefs = createTreeMap("srcDefs", BTreeKeySerializer.STRING, IO.idsSz);
+    BTreeKeySerializer<String> stringSz = BTreeKeySerializer.STRING;
+    _srcToId = createTreeMap("srcToId", stringSz, Serializer.LONG);
+    _srcDefs = createTreeMap("srcDefs", longSz, IO.idsSz);
+    _srcInfo = createTreeMap("srcInfo", longSz, IO.srcInfoSz);
     _topDefs = _db.createTreeSet("topDefs").serializer(longSz).makeOrGet();
 
     // MapDB insists on serializing they key and value serializers into a catalog file, so we have
@@ -327,8 +330,37 @@ public class MapDBStore extends ProjectStore {
         BTreeKeySerializer.TUPLE2).makeOrGet());
     }
 
-    // TODO
-    _projectRefs = new EphemeralRefTree();
+    // TODO: omit refsById and resolve global name using def chain
+    _refsByName = createTreeMap("refsByName", stringSz, Serializer.LONG);
+    _refsById   = createTreeMap("refsById", longSz, Serializer.STRING);
+    _projectRefs = new RefTree() {
+      public Long get (Ref.Global ref) {
+        return _refsByName.get(ref.toString());
+      }
+      public Ref.Global get (Long defId) {
+        String sv = _refsById.get(defId);
+        return (sv == null) ? null : Ref.Global.fromString(sv);
+      }
+      public Long resolve (Ref.Global ref, Long assignId) {
+        String key = ref.toString();
+        Long id = _refsByName.get(key);
+        if (id == null) {
+          _refsByName.put(key, assignId);
+          id = assignId;
+        }
+        return id;
+      }
+      public void remove (Set<Long> ids) {
+        for (Long id : ids) {
+          String ref = _refsById.remove(id);
+          if (ref != null) _refsByName.remove(ref);
+        }
+      }
+      public void clear () {
+        _refsByName.clear();
+        _refsById.clear();
+      }
+    };
   }
 
   protected <K,V> BTreeMap<K,V> createTreeMap (String name, BTreeKeySerializer<K> keySz,
@@ -337,11 +369,10 @@ public class MapDBStore extends ProjectStore {
   }
 
   private final DB _db;
-  private final RefTree _projectRefs;
 
-  private final BTreeMap<Long,String> _srcById;
-  private final Map<String,Long> _srcToId;
-  private final BTreeMap<String,Set<Long>> _srcDefs;
+  private final BTreeMap<String,Long> _srcToId;
+  private final BTreeMap<Long,IO.SourceInfo> _srcInfo;
+  private final BTreeMap<Long,Set<Long>> _srcDefs;
   private final Set<Long> _topDefs;
   private final BTreeMap<Long,Def> _defs;
   private final BTreeMap<Long,Sig> _defSig;
@@ -349,4 +380,8 @@ public class MapDBStore extends ProjectStore {
   private final BTreeMap<Long,Set<Long>> _defMems;
   private final BTreeMap<Long,List<Use>> _defUses;
   private final Map<Kind,NavigableSet<Fun.Tuple2<String,Long>>> _indices;
+
+  private final BTreeMap<String,Long> _refsByName;
+  private final BTreeMap<Long,String> _refsById;
+  private final RefTree _projectRefs;
 }

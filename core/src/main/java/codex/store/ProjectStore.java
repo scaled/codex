@@ -30,9 +30,10 @@ public abstract class ProjectStore implements AutoCloseable {
   public abstract Iterable<Def> topLevelDefs ();
 
   /**
-   * Returns true if {@code source} is indexed by this project, false otherwise.
+   * Returns the timestamp at which {@code source} was last indexed by this project, 0L if it has
+   * never been indexed by this project.
    */
-  public abstract boolean isIndexed (Source source);
+  public abstract long lastIndexed (Source source);
 
   /**
    * Returns all defs in the specified source file.
@@ -100,7 +101,7 @@ public abstract class ProjectStore implements AutoCloseable {
    * @return true if elems were delivered, false if {@code source} was unknown to this store.
    */
   public boolean visit (Source source, Consumer<Element> cons) {
-    if (!isIndexed(source)) return false;
+    if (lastIndexed(source) == 0L) return false;
     for (Def def : sourceDefs(source)) {
       cons.accept(def);
       for (Use use : uses(def.id)) cons.accept(use);

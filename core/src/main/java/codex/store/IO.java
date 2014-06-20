@@ -18,8 +18,48 @@ import org.mapdb.Serializer;
 
 public class IO implements Serializable {
 
+  public static class SourceInfo {
+    public final String source;
+    public final long indexed;
+
+    public SourceInfo (String source, long indexed) {
+      this.source = source;
+      this.indexed = indexed;
+    }
+  }
+
+  public static class SourceInfoSerializer implements Serializer<SourceInfo>, Serializable {
+    @Override public int fixedSize() { return -1; }
+    @Override public void serialize (DataOutput out, SourceInfo info) throws IOException {
+      out.writeUTF(info.source);
+      out.writeLong(info.indexed);
+    }
+    @Override public SourceInfo deserialize (DataInput in, int available) throws IOException {
+      return new SourceInfo(in.readUTF(), in.readLong());
+    }
+  }
+  public static final Serializer<SourceInfo> srcInfoSz = new SourceInfoSerializer();
+
+  public static class IdsSerializer implements Serializer<Set<Long>>, Serializable {
+    @Override public int fixedSize() { return -1; }
+    @Override public void serialize (DataOutput out, Set<Long> ids) throws IOException {
+      out.writeInt(ids.size());
+      for (Long id : ids) out.writeLong(id);
+    }
+    @Override public Set<Long> deserialize (DataInput in, int available) throws IOException {
+      int count = in.readInt();
+      Set<Long> ids = new HashSet<>(count);
+      for (int ii = 0; ii < count; ii++) ids.add(in.readLong());
+      return ids;
+    }
+  };
+  public static final Serializer<Set<Long>> idsSz = new IdsSerializer();
+
   public static ProjectStore store;
 
+  // StoreSerialiezers rely on the static store field being initialized at the right time; this is
+  // hackery due to MapDB's requirement that serializers be themselves serialized (via Java
+  // serialization) and stored in the database they're used with; needless PITA
   public static class StoreSerializer implements Serializable {
     public transient ProjectStore store;
     private void readObject (ObjectInputStream in) {
@@ -65,21 +105,6 @@ public class IO implements Serializable {
     }
   };
   public static final Serializer<Doc> docSz = new DocSerializer();
-
-  public static class IdsSerializer implements Serializer<Set<Long>>, Serializable {
-    @Override public int fixedSize() { return -1; }
-    @Override public void serialize (DataOutput out, Set<Long> ids) throws IOException {
-      out.writeInt(ids.size());
-      for (Long id : ids) out.writeLong(id);
-    }
-    @Override public Set<Long> deserialize (DataInput in, int available) throws IOException {
-      int count = in.readInt();
-      Set<Long> ids = new HashSet<>(count);
-      for (int ii = 0; ii < count; ii++) ids.add(in.readLong());
-      return ids;
-    }
-  };
-  public static final Serializer<Set<Long>> idsSz = new IdsSerializer();
 
   public static class UsesSerializer extends StoreSerializer implements Serializer<List<Use>> {
     @Override public int fixedSize() { return -1; }
