@@ -7,8 +7,10 @@ package codex.store;
 import codex.model.*;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.Externalizable;
 import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -16,7 +18,7 @@ import java.util.List;
 import java.util.Set;
 import org.mapdb.Serializer;
 
-public class IO implements Serializable {
+public class IO {
 
   public static class SourceInfo {
     public final String source;
@@ -38,7 +40,7 @@ public class IO implements Serializable {
       return new SourceInfo(in.readUTF(), in.readLong());
     }
   }
-  public static final Serializer<SourceInfo> srcInfoSz = new SourceInfoSerializer();
+  public static final Serializer<SourceInfo> SRCINFO_SZ = new SourceInfoSerializer();
 
   public static class IdsSerializer implements Serializer<Set<Long>>, Serializable {
     @Override public int fixedSize() { return -1; }
@@ -53,20 +55,20 @@ public class IO implements Serializable {
       return ids;
     }
   };
-  public static final Serializer<Set<Long>> idsSz = new IdsSerializer();
+  public static final Serializer<Set<Long>> IDS_SZ = new IdsSerializer();
 
   public static ProjectStore store;
 
-  // StoreSerialiezers rely on the static store field being initialized at the right time; this is
-  // hackery due to MapDB's requirement that serializers be themselves serialized (via Java
-  // serialization) and stored in the database they're used with; needless PITA
-  public static class StoreSerializer implements Serializable {
-    public transient ProjectStore store;
-    private void readObject (ObjectInputStream in) {
-      this.store = IO.store;
+  // StoreSerialiezers rely on the static store field being initialized at the right time;
+  // this hackery is due to MapDB's requirement that serializers be themselves serialized
+  // (via Java serialization) and stored in the database they're used with; needless PITA
+  public static class StoreSerializer implements Externalizable {
+    public transient ProjectStore store = IO.store; {
       if (this.store == null) throw new IllegalStateException(
-        "IO.store must be set prior to unserializing serializers");
+        "IO.store must be set prior to instantiating serializers");
     }
+    public void writeExternal (ObjectOutput out) throws IOException {}
+    public void readExternal (ObjectInput in) throws IOException, ClassNotFoundException {}
   }
 
   public static class DefSerializer extends StoreSerializer implements Serializer<Def> {
@@ -78,7 +80,6 @@ public class IO implements Serializable {
       return readDef(in, store);
     }
   }
-  public static final Serializer<Def> defSz = new DefSerializer();
 
   public static class SigSerializer extends StoreSerializer implements Serializer<Sig> {
     @Override public int fixedSize() { return -1; }
@@ -91,7 +92,6 @@ public class IO implements Serializable {
       return new Sig(in.readUTF(), readDefs(in, store), readUses(in, store));
     }
   }
-  public static final Serializer<Sig> sigSz = new SigSerializer();
 
   public static class DocSerializer extends StoreSerializer implements Serializer<Doc> {
     @Override public int fixedSize() { return -1; }
@@ -104,7 +104,6 @@ public class IO implements Serializable {
       return new Doc(in.readInt(), in.readInt(), readUses(in, store));
     }
   };
-  public static final Serializer<Doc> docSz = new DocSerializer();
 
   public static class UsesSerializer extends StoreSerializer implements Serializer<List<Use>> {
     @Override public int fixedSize() { return -1; }
@@ -115,7 +114,6 @@ public class IO implements Serializable {
       return readUses(in, store);
     }
   };
-  public static final Serializer<List<Use>> usesSz = new UsesSerializer();
 
   public static Def readDef (DataInput in, ProjectStore store) throws IOException {
     return new Def(store, in.readLong() /*id*/, zero2null(in.readLong()) /*outerId*/,

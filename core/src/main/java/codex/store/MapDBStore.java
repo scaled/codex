@@ -11,6 +11,7 @@ import codex.model.*;
 import com.google.common.collect.Iterables;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -176,16 +177,22 @@ public class MapDBStore extends ProjectStore {
       if (!oldSourceIds.isEmpty()) removeDefs(oldSourceIds);
       _srcDefs.put(unitId, newSourceIds);
       _srcInfo.put(unitId, new IO.SourceInfo(srcKey, indexed));
+      _db.commit();
+
       System.err.println(srcKey + " has " + newSourceIds.size() + " defs");
     }
   };
 
   public MapDBStore () {
-    this(DBMaker.newMemoryDB().make());
+    this(DBMaker.newMemoryDB());
+  }
+
+  public MapDBStore (Path store) {
+    this(store.toFile());
   }
 
   public MapDBStore (File store) {
-    this(DBMaker.newFileDB(store).closeOnJvmShutdown().make());
+    this(DBMaker.newFileDB(store).closeOnJvmShutdown());
   }
 
   /**
@@ -217,7 +224,9 @@ public class MapDBStore extends ProjectStore {
   }
 
   @Override public long lastIndexed (Source source) {
-    IO.SourceInfo info = _srcInfo.get(source.toString());
+    Long unitId = _srcToId.get(source.toString());
+    if (unitId == null) return 0L;
+    IO.SourceInfo info = _srcInfo.get(unitId);
     return info == null ? 0L : info.indexed;
   }
 
@@ -304,25 +313,35 @@ public class MapDBStore extends ProjectStore {
     return value;
   }
 
-  private MapDBStore (DB db) {
-    _db = db;
-
+  private MapDBStore (DBMaker<?> maker) {
     BTreeKeySerializer<Long> longSz = BTreeKeySerializer.ZERO_OR_POSITIVE_LONG;
     BTreeKeySerializer<String> stringSz = BTreeKeySerializer.STRING;
-    _srcToId = createTreeMap("srcToId", stringSz, Serializer.LONG);
-    _srcDefs = createTreeMap("srcDefs", longSz, IO.idsSz);
-    _srcInfo = createTreeMap("srcInfo", longSz, IO.srcInfoSz);
-    _topDefs = _db.createTreeSet("topDefs").serializer(longSz).makeOrGet();
 
     // MapDB insists on serializing they key and value serializers into a catalog file, so we have
-    // to do this hackery to ensure that our serialized serializers get the right store reference
+    // to do this hackery to ensure that our serialized serializers get the right store reference;
+    // this also has to happen *before* we call maker.make() because the classes are resolved then
+    Thread thread = Thread.currentThread();
+    ClassLoader oloader = thread.getContextClassLoader();
+    thread.setContextClassLoader(getClass().getClassLoader());
     IO.store = this;
-    _defs    = createTreeMap("defs",    longSz, IO.defSz);
-    _defSig  = createTreeMap("defSig",  longSz, IO.sigSz);
-    _defDoc  = createTreeMap("defDoc",  longSz, IO.docSz);
-    _defMems = createTreeMap("defMems", longSz, IO.idsSz);
-    _defUses = createTreeMap("defUses", longSz, IO.usesSz);
-    IO.store = null;
+    try {
+      _db = maker.make();
+
+      _srcToId = createTreeMap("srcToId", stringSz, Serializer.LONG);
+      _srcDefs = createTreeMap("srcDefs", longSz, IO.IDS_SZ);
+      _srcInfo = createTreeMap("srcInfo", longSz, IO.SRCINFO_SZ);
+      _topDefs = _db.createTreeSet("topDefs").serializer(longSz).makeOrGet();
+
+      _defs    = createTreeMap("defs",    longSz, new IO.DefSerializer());
+      _defSig  = createTreeMap("defSig",  longSz, new IO.SigSerializer());
+      _defDoc  = createTreeMap("defDoc",  longSz, new IO.DocSerializer());
+      _defMems = createTreeMap("defMems", longSz, IO.IDS_SZ);
+      _defUses = createTreeMap("defUses", longSz, new IO.UsesSerializer());
+
+    } finally {
+      IO.store = null;
+      thread.setContextClassLoader(oloader);
+    }
 
     _indices = new HashMap<>();
     for (Kind kind : Kind.values()) {
@@ -346,6 +365,7 @@ public class MapDBStore extends ProjectStore {
         Long id = _refsByName.get(key);
         if (id == null) {
           _refsByName.put(key, assignId);
+          _refsById.put(assignId, key);
           id = assignId;
         }
         return id;
@@ -363,8 +383,8 @@ public class MapDBStore extends ProjectStore {
     };
   }
 
-  protected <K,V> BTreeMap<K,V> createTreeMap (String name, BTreeKeySerializer<K> keySz,
-                                               Serializer<V> valSz) {
+  private <K,V> BTreeMap<K,V> createTreeMap (String name, BTreeKeySerializer<K> keySz,
+                                             Serializer<V> valSz) {
     return _db.createTreeMap(name).keySerializer(keySz).valueSerializer(valSz).makeOrGet();
   }
 
