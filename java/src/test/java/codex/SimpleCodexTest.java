@@ -7,6 +7,7 @@ package codex;
 import codex.extract.JavaExtractor;
 import codex.model.*;
 import codex.store.*;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -49,7 +50,6 @@ public class SimpleCodexTest {
 
   @BeforeClass public static void populateStore () throws Exception {
     store = new MapDBStore();
-
     List<Path> classpath = new ArrayList<>();
     for (URL url : ((URLClassLoader)SimpleCodexTest.class.getClassLoader()).getURLs()) {
       classpath.add(Paths.get(url.toURI()));
@@ -57,15 +57,7 @@ public class SimpleCodexTest {
     extract = new JavaExtractor() {
       @Override public Iterable<Path> classpath () { return classpath; }
     };
-
     extract.process(codexSources(), store.writer);
-
-    // String zip = System.getProperty("user.home") +
-    //   "/.m2/repository/com/threerings/react/1.4/react-1.4-sources.jar";
-    // extract.process(new ZipFile(zip), store.writer);
-
-    // String zip = System.getProperty("java.home") + "/../src.zip";
-    // extract.process(new ZipFile(zip), e -> e.getName().startsWith("java"), store.writer);
   }
 
   @AfterClass public static void clearStore () {
@@ -74,15 +66,25 @@ public class SimpleCodexTest {
     extract = null;
   }
 
+  /*@Test*/ public void testFileCodexPerf () throws IOException {
+    MapDBStore store = new MapDBStore(new File("test-codex"));
+    JavaExtractor extract = new JavaExtractor();
+    if (false) {
+      String zip = System.getProperty("user.home") +
+        "/.m2/repository/com/google/guava/guava/16.0.1/guava-16.0.1-sources.jar";
+      extract.process(new ZipFile(zip), store.writer);
+    } else {
+      String zip = System.getProperty("java.home") + "/../src.zip";
+      extract.process(new ZipFile(zip), e -> e.getName().startsWith("java"), store.writer);
+    }
+    System.out.println(store.defCount() + " defs.");
+    System.out.println(store.nameCount() + " (exported) names.");
+    store.close();
+  }
+
   public Codex simpleCodex () {
     return new Codex.Simple(Collections.singletonList(store));
   }
-
-  // @Test public void testSize () {
-  //   System.out.println(store.defCount() + " defs.");
-  //   System.out.println(store.nameCount(false) + " names.");
-  //   System.out.println(store.nameCount(true) + " exported names.");
-  // }
 
   // @Test public void testDump () {
   //   dump(store);
