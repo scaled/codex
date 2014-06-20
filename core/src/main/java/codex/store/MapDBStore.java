@@ -299,7 +299,7 @@ public class MapDBStore extends ProjectStore {
 
   @Override public Source source (Long defId) {
     IO.SourceInfo info = _srcInfo.get(toUnitId(defId));
-    if (info == null) throw new IllegalArgumentException("No source for def " + defId);
+    if (info == null) throw new IllegalArgumentException("No source for def " + idToString(defId));
     return Source.fromString(info.source);
   }
 
@@ -332,13 +332,21 @@ public class MapDBStore extends ProjectStore {
   }
 
   private Iterable<Def> defs (Long defId, Iterable<Long> defIds) {
-    if (defIds == null) throw new NoSuchElementException("No def with id " + defId);
+    reqdef(defId, defIds);
     return Iterables.transform(defIds, id -> _defs.get(id));
   }
 
   private <T> T reqdef (Long defId, T value) {
-    if (value == null) throw new NoSuchElementException("No def with id " + defId);
+    if (value == null) throw new NoSuchElementException("No def with id " + idToString(defId));
     return value;
+  }
+
+  private String idToString (long defId) {
+    long unitId = defId / MAX_DEF_ID;
+    long rawDefId = defId % MAX_DEF_ID;
+    String pre = (rawDefId > MAX_EXP_ID) ? "" : "exp:";
+    if (rawDefId > MAX_EXP_ID) rawDefId -= MAX_EXP_ID;
+    return pre + unitId + ":" + rawDefId;
   }
 
   private MapDBStore (DBMaker<?> maker) {
@@ -366,49 +374,49 @@ public class MapDBStore extends ProjectStore {
       _defMems = createTreeMap("defMems", longSz, IO.IDS_SZ);
       _defUses = createTreeMap("defUses", longSz, new IO.UsesSerializer());
 
+      _indices = new HashMap<>();
+      for (Kind kind : Kind.values()) {
+        _indices.put(kind, _db.createTreeSet("idx"+kind).serializer(
+          BTreeKeySerializer.TUPLE2).makeOrGet());
+      }
+
+      // TODO: omit refsById and resolve global name using def chain
+      _refsByName = createTreeMap("refsByName", stringSz, Serializer.LONG);
+      _refsById   = createTreeMap("refsById", longSz, Serializer.STRING);
+      _projectRefs = new RefTree() {
+        public Long get (Ref.Global ref) {
+          return _refsByName.get(ref.toString());
+        }
+        public Ref.Global get (Long defId) {
+          String sv = _refsById.get(defId);
+          return (sv == null) ? null : Ref.Global.fromString(sv);
+        }
+        public Long resolve (Ref.Global ref, Long assignId) {
+          String key = ref.toString();
+          Long id = _refsByName.get(key);
+          if (id == null) {
+            _refsByName.put(key, assignId);
+            _refsById.put(assignId, key);
+            id = assignId;
+          }
+          return id;
+        }
+        public void remove (Set<Long> ids) {
+          for (Long id : ids) {
+            String ref = _refsById.remove(id);
+            if (ref != null) _refsByName.remove(ref);
+          }
+        }
+        public void clear () {
+          _refsByName.clear();
+          _refsById.clear();
+        }
+      };
+
     } finally {
       IO.store = null;
       thread.setContextClassLoader(oloader);
     }
-
-    _indices = new HashMap<>();
-    for (Kind kind : Kind.values()) {
-      _indices.put(kind, _db.createTreeSet("idx"+kind).serializer(
-        BTreeKeySerializer.TUPLE2).makeOrGet());
-    }
-
-    // TODO: omit refsById and resolve global name using def chain
-    _refsByName = createTreeMap("refsByName", stringSz, Serializer.LONG);
-    _refsById   = createTreeMap("refsById", longSz, Serializer.STRING);
-    _projectRefs = new RefTree() {
-      public Long get (Ref.Global ref) {
-        return _refsByName.get(ref.toString());
-      }
-      public Ref.Global get (Long defId) {
-        String sv = _refsById.get(defId);
-        return (sv == null) ? null : Ref.Global.fromString(sv);
-      }
-      public Long resolve (Ref.Global ref, Long assignId) {
-        String key = ref.toString();
-        Long id = _refsByName.get(key);
-        if (id == null) {
-          _refsByName.put(key, assignId);
-          _refsById.put(assignId, key);
-          id = assignId;
-        }
-        return id;
-      }
-      public void remove (Set<Long> ids) {
-        for (Long id : ids) {
-          String ref = _refsById.remove(id);
-          if (ref != null) _refsByName.remove(ref);
-        }
-      }
-      public void clear () {
-        _refsByName.clear();
-        _refsById.clear();
-      }
-    };
   }
 
   private <K,V> BTreeMap<K,V> createTreeMap (String name, BTreeKeySerializer<K> keySz,
