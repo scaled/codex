@@ -11,19 +11,20 @@ import codex.model.*;
  * traversing their own internal ASTs. Calls should occur in the following order:
  *
  * <pre>{@code
- * [openUnit
- *   [openDef
- *     emitRelation*
- *     emitSig?
- *       emitSigDef*
- *       emitSigUse*
- *     emitDoc?
- *       emitDocUse*
- *     emitUse*
- *     commitDef
- *     [openDef..closeDef]*
- *   closeDef]*
- * closeUnit]*
+ * [openSession
+ *   [openUnit
+ *     [openDef
+ *       emitRelation*
+ *       emitSig?
+ *         emitSigDef*
+ *         emitSigUse*
+ *       emitDoc?
+ *         emitDocUse*
+ *       emitUse*
+ *       [openDef..closeDef]*
+ *     closeDef]*
+ *   closeUnit]*
+ * closeSession]
  * }</pre>
  *
  * A * indicates that a method can be called zero or more times. A ? indicates that a method can be
@@ -32,6 +33,7 @@ import codex.model.*;
  */
 public abstract class Writer {
 
+  public abstract void openSession ();
   public abstract void openUnit (Source source);
 
   public abstract void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
@@ -50,4 +52,5 @@ public abstract class Writer {
 
   public abstract void closeDef ();
   public abstract void closeUnit ();
+  public abstract void closeSession ();
 }

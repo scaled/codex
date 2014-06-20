@@ -106,10 +106,15 @@ public class JavaExtractor {
       Iterable<? extends CompilationUnitTree> asts = task.parse();
       task.analyze(); // don't need results, but need annotations in tree
 
-      Context context = task.getContext();
-      ExtractingScanner scanner = new ExtractingScanner(Types.instance(context));
-      for (CompilationUnitTree tree : asts) {
-        if (filter(tree.getSourceFile())) scanner.extract(tree, writer);
+      writer.openSession();
+      try {
+        Context context = task.getContext();
+        ExtractingScanner scanner = new ExtractingScanner(Types.instance(context));
+        for (CompilationUnitTree tree : asts) {
+          if (filter(tree.getSourceFile())) scanner.extract(tree, writer);
+        }
+      } finally {
+        writer.closeSession();
       }
 
       // annoyingly, there's no (public) way to tell the task that we're done without generating
