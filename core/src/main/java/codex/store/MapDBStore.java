@@ -11,8 +11,11 @@ import codex.model.*;
 import com.google.common.collect.Iterables;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -22,6 +25,7 @@ import java.util.NavigableSet;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.mapdb.BTreeKeySerializer;
 import org.mapdb.BTreeMap;
 import org.mapdb.Bind;
@@ -200,15 +204,11 @@ public class MapDBStore extends ProjectStore {
   };
 
   public MapDBStore () {
-    this(DBMaker.newMemoryDB());
+    this(null, DBMaker.newMemoryDB());
   }
 
   public MapDBStore (Path store) {
-    this(store.toFile());
-  }
-
-  public MapDBStore (File store) {
-    this(DBMaker.newFileDB(store).
+    this(store, DBMaker.newFileDB(store.toFile()).
          mmapFileEnableIfSupported().
          cacheDisable().
          compressionEnable().
@@ -303,6 +303,15 @@ public class MapDBStore extends ProjectStore {
     return Source.fromString(info.source);
   }
 
+  @Override public String idToString (Long id) {
+    long defId = id;
+    long unitId = defId / MAX_DEF_ID;
+    long rawDefId = defId % MAX_DEF_ID;
+    String pre = (rawDefId > MAX_EXP_ID) ? "" : "exp:";
+    if (rawDefId > MAX_EXP_ID) rawDefId -= MAX_EXP_ID;
+    return pre + unitId + ":" + rawDefId;
+  }
+
   @Override public void find (Codex.Query query, boolean expOnly, List<Def> into) {
     boolean pre = query.prefix;
     String name = query.name;
@@ -341,17 +350,40 @@ public class MapDBStore extends ProjectStore {
     return value;
   }
 
-  private String idToString (long defId) {
-    long unitId = defId / MAX_DEF_ID;
-    long rawDefId = defId % MAX_DEF_ID;
-    String pre = (rawDefId > MAX_EXP_ID) ? "" : "exp:";
-    if (rawDefId > MAX_EXP_ID) rawDefId -= MAX_EXP_ID;
-    return pre + unitId + ":" + rawDefId;
-  }
-
-  private MapDBStore (DBMaker<?> maker) {
+  private MapDBStore (Path storePath, DBMaker<?> maker) {
     BTreeKeySerializer<Long> longSz = BTreeKeySerializer.ZERO_OR_POSITIVE_LONG;
     BTreeKeySerializer<String> stringSz = BTreeKeySerializer.STRING;
+
+    // if we're a persistent database, check our schema version and blow away the old db if the
+    // schema is out of date; since a store is basically a fancy cache, it'll be rebuilt
+    if (storePath != null) {
+      Path versFile = Paths.get(storePath.toString()+".v");
+      int fileVers = 0;
+      try {
+        if (Files.exists(versFile)) {
+          fileVers = Integer.parseInt(Files.readAllLines(versFile).get(0));
+        }
+      } catch (Throwable t) {
+        System.err.println("Error reading version from " + versFile);
+        t.printStackTrace(System.err);
+      }
+      if (fileVers < SCHEMA_VERS) {
+        String storeName = storePath.getFileName().toString();
+        assert storeName.length() > 0;
+        try {
+          for (Path file : Files.list(storePath.getParent()).collect(Collectors.toList())) {
+            if (file.getFileName().toString().startsWith(storeName)) Files.delete(file);
+          }
+        } catch (IOException ioe) {
+          System.err.println("Error deleting stale database: " + ioe);
+        }
+        try {
+          Files.write(versFile, Arrays.asList(String.valueOf(SCHEMA_VERS)));
+        } catch (IOException ioe) {
+          System.err.println("Error writing version file " + versFile + ": " + ioe);
+        }
+      }
+    }
 
     // MapDB insists on serializing they key and value serializers into a catalog file, so we have
     // to do this hackery to ensure that our serialized serializers get the right store reference;
@@ -440,4 +472,6 @@ public class MapDBStore extends ProjectStore {
   private final BTreeMap<String,Long> _refsByName;
   private final BTreeMap<Long,String> _refsById;
   private final RefTree _projectRefs;
+
+  private static final int SCHEMA_VERS = 1;
 }
