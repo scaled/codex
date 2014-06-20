@@ -38,6 +38,7 @@ public final class Def implements Element {
 
   public Def (ProjectStore project, Long id, Long outerId, Kind kind, boolean exported,
               String name, int offset) {
+    assert project != null;
     this.project = project;
     this.id = id;
     this.outerId = outerId;
@@ -64,7 +65,9 @@ public final class Def implements Element {
 
   /** Returns a global reference to this def. */
   public Ref.Global globalRef () {
-    return project.ref(id);
+    Ref.Global ref = project.ref(id);
+    assert ref != null : "No global ref for " + this;
+    return ref;
   }
 
   /** Computes and returns the fully qualified name of this def. */
