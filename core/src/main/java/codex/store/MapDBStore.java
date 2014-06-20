@@ -195,7 +195,7 @@ public class MapDBStore extends ProjectStore {
         _writeCount = 0;
       }
 
-      System.err.println(srcKey + " has " + newSourceIds.size() + " defs");
+      // System.err.println(srcKey + " has " + newSourceIds.size() + " defs");
     }
   };
 
@@ -320,7 +320,6 @@ public class MapDBStore extends ProjectStore {
   }
 
   private void removeDefs (Set<Long> defIds) {
-    System.err.println("removeDefs(" + defIds + ")");
     // TODO: only remove exported defs from projectRefs
     _projectRefs.remove(defIds);
     _topDefs.removeAll(defIds);
