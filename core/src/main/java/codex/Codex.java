@@ -108,7 +108,7 @@ public abstract class Codex {
    */
   public Optional<ProjectStore> storeFor (Source source) {
     for (ProjectStore store : stores()) {
-      if (store.isIndexed(source)) return Optional.of(store);
+      if (store.lastIndexed(source) > 0L) return Optional.of(store);
     }
     return Optional.empty();
   }
