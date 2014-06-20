@@ -91,6 +91,11 @@ public abstract class ProjectStore implements AutoCloseable {
   public abstract void find (Codex.Query query, boolean expOnly, List<Def> into);
 
   /**
+   * Returns a debug representation of {@code id}.
+   */
+  public abstract String idToString (Long id);
+
+  /**
    * Delivers all known defs and uses in {@code source} to {@code cons}. The order in which the defs
    * and uses is unspecified, other than that each def will be immediately followed by the uses
    * nested immediately inside that def.

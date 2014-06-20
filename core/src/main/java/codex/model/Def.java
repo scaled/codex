@@ -81,6 +81,16 @@ public final class Def implements Element {
     return toFqName(globalRef().parent);
   }
 
+  /** Returns a more useful string representation of this def's {@link #id}. For to debug! */
+  public String idToString () {
+    return project.idToString(id);
+  }
+
+  /** Returns a more useful string representation of this def's {@link #outerId}. For to debug! */
+  public String outerIdToString () {
+    return (outerId == null) ? "<null>" : project.idToString(outerId);
+  }
+
   /** Returns true if this def is structurally equal to {@code other}. */
   public boolean equals (Def other) {
     return (project == other.project && id.equals(other.id) &&
