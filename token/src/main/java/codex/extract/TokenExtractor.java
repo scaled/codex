@@ -24,15 +24,18 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class TokenExtractor {
+public class TokenExtractor implements Extractor {
 
-  /** Processes {@code files}. Metadata is emitted to {@code writer}. */
-  public void process (Iterable<Path> files, Writer writer) throws IOException {
+  @Override public void process (Iterable<Path> files, Writer writer) {
     writer.openSession();
     try {
       for (Path file : files) {
-        process(new Source.File(file.toString()),
-                Files.newBufferedReader(file, StandardCharsets.UTF_8), writer);
+        try {
+          process(new Source.File(file.toString()),
+                  Files.newBufferedReader(file, StandardCharsets.UTF_8), writer);
+        } catch (IOException e) {
+          e.printStackTrace(System.err);
+        }
       }
     } finally {
       writer.closeSession();
@@ -68,8 +71,8 @@ public class TokenExtractor {
 
     String lang = source.fileExt().intern();
     Map<String,Kind> kinds = kindsFor(lang);
-    String prevtok = null;
-    String curdef = null;
+    String prevtok = "";
+    String curdef = "";
     Ref.Global curid = Ref.Global.ROOT;
     Deque<String> blocks = new ArrayDeque<>();
 
@@ -84,15 +87,15 @@ public class TokenExtractor {
         // note that we entered a block for our most recent def
         blocks.push(curdef);
         // and clear out curdef so that nested blocks for this def are ignored
-        curdef = null;
+        curdef = "";
 
       } else if (tok.ttype == '}') {
         // we may enter a block, enter a def which has no block, and then exit the enclosing block;
         // in that case we're also exiting that nested def, so emit it now
-        if (curdef != null) {
+        if (curdef != "") {
           writer.closeDef();
-          if (curdef != null) curid = curid.parent;
-          curdef = null;
+          curid = curid.parent;
+          curdef = "";
         }
 
         if (blocks.isEmpty()) {
@@ -101,7 +104,7 @@ public class TokenExtractor {
         } else {
           String popdef = blocks.pop();
           // if this block was associated with a def, we're exiting it
-          if (popdef != null) {
+          if (popdef != "") {
             curid = curid.parent;
             writer.closeDef();
           }
@@ -118,7 +121,7 @@ public class TokenExtractor {
           int ntok = tok.nextToken();
           if (ntok == ';' || (ntok != '{' && lang == "scala")) {
             blocks.push(curdef);
-            curdef = null;
+            curdef = "";
           }
           tok.pushBack();
 
@@ -126,7 +129,7 @@ public class TokenExtractor {
           Kind kind = kinds.get(prevtok);
           if (kind != null) {
             // if our previous def had no block associated with it, we're exiting it now
-            if (curdef != null) {
+            if (curdef != "") {
               curid = curid.parent;
               writer.closeDef();
             }
@@ -141,7 +144,7 @@ public class TokenExtractor {
     }
 
     // if our last def had no block associated with it, we're exiting it now
-    if (curdef != null) writer.closeDef();
+    if (curdef != "") writer.closeDef();
 
     writer.closeUnit();
   }
