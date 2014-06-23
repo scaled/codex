@@ -34,7 +34,7 @@ import javax.tools.StandardJavaFileManager;
  * Handles extraction of Codex metadata from Java source code. This effectively compiles the code
  * using the standard Java compiler, but stops short of generating bytecode.
  */
-public class JavaExtractor {
+public class JavaExtractor implements Extractor {
 
   public JavaExtractor () {
     this(JavacTool.create());
@@ -47,8 +47,7 @@ public class JavaExtractor {
   /** Provides the classpath used by the compiler. */
   public Iterable<Path> classpath () { return Collections.emptyList(); }
 
-  /** Processes {@code files}. Metadata is emitted to {@code writer}. */
-  public void process (Iterable<Path> files, Writer writer) {
+  @Override public void process (Iterable<Path> files, Writer writer) {
     StandardJavaFileManager fm = _compiler.getStandardFileManager(null, null, null); // TODO: args?
     process0(fm.getJavaFileObjectsFromFiles(Iterables.transform(files, Path::toFile)), writer);
   }
