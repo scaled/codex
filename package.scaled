@@ -6,5 +6,4 @@ descrip: A framework for grokking code.
 license: New BSD
  module: core
  module: java
- module: token
 testdep: mvn:junit:junit:4.11
