@@ -55,7 +55,9 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     int offset = _text.indexOf(pname, unit.pos);
     writer.openDef(_id, pname, Kind.MODULE, Flavor.PACKAGE, true, Access.PUBLIC,
                    offset, 0, _text.length()); // TODO: this bodystart/end is kind of bogus
-    writer.emitSig("package " + pname);
+    String pkgpre = "package ";
+    writer.emitSig(pkgpre + pname);
+    writer.emitSigDef(_id, pname, Kind.MODULE, pkgpre.length());
     super.visitCompilationUnit(node, writer);
     writer.closeDef();
     _id = _id.parent;
