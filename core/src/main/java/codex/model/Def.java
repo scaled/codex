@@ -33,6 +33,9 @@ public final class Def implements Element {
   /** Whether or not this def is visible outside its compilation unit. */
   public final boolean exported;
 
+  /** The access level of the def. */
+  public final Access access;
+
   /** The name defined by this def. */
   public final String name;
 
@@ -46,7 +49,8 @@ public final class Def implements Element {
   public final int bodyEnd;
 
   public Def (ProjectStore project, Long id, Long outerId, Kind kind, Flavor flavor,
-              boolean exported, String name, int offset, int bodyStart, int bodyEnd) {
+              boolean exported, Access access, String name,
+              int offset, int bodyStart, int bodyEnd) {
     assert project != null;
     this.project = project;
     this.id = id;
@@ -54,6 +58,7 @@ public final class Def implements Element {
     this.kind = kind;
     this.flavor = flavor;
     this.exported = exported;
+    this.access = access;
     this.name = name;
     this.offset = offset;
     this.bodyStart = bodyStart;
@@ -112,8 +117,8 @@ public final class Def implements Element {
   public boolean equals (Def od) {
     return (project == od.project && id.equals(od.id) &&
             Objects.equals(outerId, od.outerId) && kind == od.kind && flavor == od.flavor &&
-            exported == od.exported && name.equals(od.name) && offset == od.offset &&
-            bodyStart == od.bodyStart && bodyEnd == od.bodyEnd);
+            exported == od.exported && access == od.access && name.equals(od.name) &&
+            offset == od.offset && bodyStart == od.bodyStart && bodyEnd == od.bodyEnd);
   }
 
   @Override public Ref ref () { return Ref.local(project, id); }

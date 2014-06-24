@@ -27,12 +27,14 @@ public class TextWriter extends Writer {
   }
 
   @Override public void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
-                                 boolean exported, int offset, int bodyStart, int bodyEnd) {
+                                 boolean exported, Access access,
+                                 int offset, int bodyStart, int bodyEnd) {
     emit("def", id);
     emit("name", name);
     emit("kind", kind);
     emit("flavor", flavor);
     emit("exported", exported);
+    emit("access", access);
     emit("offset", offset);
     emit("body", bodyStart, bodyEnd);
     _indent += 1;

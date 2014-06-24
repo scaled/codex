@@ -117,16 +117,18 @@ public class IO {
 
   public static Def readDef (DataInput in, ProjectStore store) throws IOException {
     return new Def(store, in.readLong() /*id*/, zero2null(in.readLong()) /*outerId*/,
-                   readKind(in), readFlavor(in), in.readBoolean() /*exported*/,
+                   readEnum(Kind.class, in), readEnum(Flavor.class, in),
+                   in.readBoolean() /*exported*/, readEnum(Access.class, in),
                    in.readUTF() /*name*/, in.readInt() /*offset*/,
                    in.readInt() /*bodyStart*/, in.readInt() /*bodyEnd*/);
   }
   public static void writeDef (DataOutput out, Def def) throws IOException {
     out.writeLong(def.id);
     out.writeLong(null2zero(def.outerId));
-    writeKind(out, def.kind);
-    writeFlavor(out, def.flavor);
+    writeEnum(out, def.kind);
+    writeEnum(out, def.flavor);
     out.writeBoolean(def.exported);
+    writeEnum(out, def.access);
     out.writeUTF(def.name);
     out.writeInt(def.offset);
     out.writeInt(def.bodyStart);
@@ -145,12 +147,12 @@ public class IO {
   }
 
   public static Use readUse (DataInput in, ProjectStore store) throws IOException {
-    return new Use(readRef(in, store), readKind(in),
+    return new Use(readRef(in, store), readEnum(Kind.class, in),
                    in.readInt() /*offset*/, in.readInt() /*length*/);
   }
   public static void writeUse (DataOutput out, Use use) throws IOException {
     writeRef(out, use.ref);
-    writeKind(out, use.refKind);
+    writeEnum(out, use.refKind);
     out.writeInt(use.offset);
     out.writeInt(use.length);
   }
@@ -166,18 +168,11 @@ public class IO {
     for (Use use : uses) writeUse(out, use);
   }
 
-  public static Kind readKind (DataInput in) throws IOException {
-    return Enum.valueOf(Kind.class, in.readUTF());
+  public static <E extends Enum<E>> E readEnum (Class<E> eclass, DataInput in) throws IOException {
+    return Enum.valueOf(eclass, in.readUTF());
   }
-  public static void writeKind (DataOutput out, Kind kind) throws IOException {
-    out.writeUTF(kind.name());
-  }
-
-  public static Flavor readFlavor (DataInput in) throws IOException {
-    return Enum.valueOf(Flavor.class, in.readUTF());
-  }
-  public static void writeFlavor (DataOutput out, Flavor flavor) throws IOException {
-    out.writeUTF(flavor.name());
+  public static void writeEnum (DataOutput out, Enum<?> eval) throws IOException {
+    out.writeUTF(eval.name());
   }
 
   public static Ref readRef (DataInput in, ProjectStore store) throws IOException {

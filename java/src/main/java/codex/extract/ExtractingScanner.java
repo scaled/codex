@@ -53,7 +53,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     String pname = unit.packge.toString();
     _id = _id.plus(pname);
     int offset = _text.indexOf(pname, unit.pos);
-    writer.openDef(_id, pname, Kind.MODULE, Flavor.NONE, true, offset, 0, _text.length());
+    writer.openDef(_id, pname, Kind.MODULE, Flavor.NONE, true, Access.PUBLIC,
+                   offset, 0, _text.length()); // TODO: this bodystart/end is kind of bogus
     writer.emitSig(pname);
     super.visitCompilationUnit(node, writer);
     writer.closeDef();
@@ -92,8 +93,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
     // we allow the name to be "" for anonymous classes so that they can be properly filtered
     // in the user interface; we eventually probably want to be more explicit about this
-    writer.openDef(_id, name, Kind.TYPE, flavor, isExp(tree.mods.flags), start,
-                   treeStart, tree.getEndPosition(_unit.peek().endPositions));
+    writer.openDef(_id, name, Kind.TYPE, flavor, isExp(tree.mods.flags), toAccess(tree.mods.flags),
+                   start, treeStart, tree.getEndPosition(_unit.peek().endPositions));
 
     // emit supertype relations
     Type t = tree.type;
@@ -149,7 +150,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       else flavor = Flavor.METHOD;
 
       // interface methods are specially defined to always be public
-      boolean isExp = hasFlag(_class.peek().mods.flags, Flags.INTERFACE) || isExp(tree.mods.flags);
+      boolean isIface = hasFlag(_class.peek().mods.flags, Flags.INTERFACE);
+      boolean isExp = isIface || isExp(tree.mods.flags);
       String name = isCtor ? _class.peek().name.toString() : tree.name.toString();
 
       // the id for a method includes signature information
@@ -158,8 +160,9 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
       int treeStart = tree.getStartPosition();
       int offset = _text.indexOf(name, treeStart);
-      writer.openDef(_id, name, Kind.FUNC, flavor, isExp, offset,
-                     treeStart, tree.getEndPosition(_unit.peek().endPositions));
+      writer.openDef(_id, name, Kind.FUNC, flavor, isExp,
+                     isIface ? Access.PUBLIC : toAccess(tree.mods.flags),
+                     offset, treeStart, tree.getEndPosition(_unit.peek().endPositions));
 
       if (tree.sym != null) emitSuperMethod(tree.sym, writer);
 
@@ -185,7 +188,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     String name = node.getName().toString();
     int offset = tree.getStartPosition();
     _id = _id.plus(name);
-    writer.openDef(_id, name, Kind.TYPE, Flavor.TYPE_PARAM, true,
+    writer.openDef(_id, name, Kind.TYPE, Flavor.TYPE_PARAM, false, Access.PRIVATE,
                    offset, offset, offset + name.length());
 
     // make super the erased type(s) of the tvar (TODO: handle intersection types)
@@ -238,8 +241,9 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // add a symtab mapping for this vardef
     if (tree.sym != null) _symtab.peek().put(tree.sym, _id);
 
-    writer.openDef(_id, name, Kind.VALUE, flavor, isExp, start,
-                   bodyStart, tree.getEndPosition(_unit.peek().endPositions));
+    writer.openDef(_id, name, Kind.VALUE, flavor, isExp,
+                   isField ? toAccess(tree.mods.flags) : Access.LOCAL,
+                   start, bodyStart, tree.getEndPosition(_unit.peek().endPositions));
 
     // emit our signature
     new SigPrinter(_id, _class.peek().name).emit(tree, writer);
@@ -563,6 +567,13 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   //   else if (hasFlag(flags, Flags.PROTECTED)) "protected"
   //   else if (hasFlag(flags, Flags.PRIVATE)) "private"
   //   else "default"
+
+  private Access toAccess (long flags) {
+    if (hasFlag(flags, Flags.PUBLIC)) return Access.PUBLIC;
+    else if (hasFlag(flags, Flags.PRIVATE)) return Access.PRIVATE;
+    else if (hasFlag(flags, Flags.PROTECTED)) return Access.PROTECTED;
+    else  return Access.PACKAGE_PRIVATE;
+  }
 
   public int nextanon () { _anoncount += 1; return _anoncount; }
   private int _anoncount = 0;

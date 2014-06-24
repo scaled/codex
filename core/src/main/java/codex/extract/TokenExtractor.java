@@ -112,10 +112,11 @@ public class TokenExtractor implements Extractor {
 
       } else if (tok.ttype == StreamTokenizer.TT_WORD) {
         if ("package".equals(prevtok) || "namespace".equals(prevtok)) {
-          int offset = tok.lineno()-1; // TODO
+          int off = tok.lineno()-1; // TODO
           curdef = tok.sval;
           curid = curid.plus(curdef);
-          writer.openDef(curid, curdef, Kind.MODULE, Flavor.NONE, true, offset, offset, offset);
+          writer.openDef(curid, curdef, Kind.MODULE, Flavor.NONE, true, Access.PUBLIC,
+                         off, off, off);
           // if the next token is a semicolon (or if this is Scala and the next token is not an open
           // bracket), pretend the rest of the file is one big block
           int ntok = tok.nextToken();
@@ -135,8 +136,8 @@ public class TokenExtractor implements Extractor {
             }
             curdef = tok.sval;
             curid = curid.plus(curdef);
-            int offset = tok.lineno()-1; // TODO
-            writer.openDef(curid, curdef, kind, Flavor.NONE, true, offset, offset, offset);
+            int off = tok.lineno()-1; // TODO
+            writer.openDef(curid, curdef, kind, Flavor.NONE, true, Access.PUBLIC, off, off, off);
           }
         }
         prevtok = tokstr;

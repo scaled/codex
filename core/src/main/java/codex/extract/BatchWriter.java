@@ -20,12 +20,13 @@ public abstract class BatchWriter extends Writer {
 
   @Override public void openUnit (Source source) {
     _curSource = source;
-    _curDef = new DefInfo(null, Ref.Global.ROOT, null, null, null, false, 0, 0, 0);
+    _curDef = new DefInfo(null, Ref.Global.ROOT, null, null, null, false, null, 0, 0, 0);
   }
 
   @Override public void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
-                                 boolean exported, int offset, int bodyStart, int bodyEnd) {
-    _curDef = _curDef.addDef(new DefInfo(_curDef, id, name, kind, flavor, exported,
+                                 boolean exported, Access access,
+                                 int offset, int bodyStart, int bodyEnd) {
+    _curDef = _curDef.addDef(new DefInfo(_curDef, id, name, kind, flavor, exported, access,
                                          offset, bodyStart, bodyEnd));
   }
 
@@ -37,7 +38,8 @@ public abstract class BatchWriter extends Writer {
     _curDef.sig = new SigInfo(text);
   }
   @Override public void emitSigDef (Ref.Global id, String name, Kind kind, int offset) {
-    _curDef.sig.addDef(new DefInfo(null, id, name, kind, Flavor.NONE, false, offset, 0, 0));
+    _curDef.sig.addDef(new DefInfo(null, id, name, kind, Flavor.NONE, false, Access.PUBLIC,
+                                   offset, 0, 0));
   }
   @Override public void emitSigUse (Ref.Global target, String name, Kind kind, int offset) {
     _curDef.sig.addUse(new UseInfo(target, kind, offset, name.length()));
@@ -123,6 +125,7 @@ public abstract class BatchWriter extends Writer {
     public final Kind kind;
     public final Flavor flavor;
     public final boolean exported;
+    public final Access access;
     public final int offset;
     public final int bodyStart;
     public final int bodyEnd;
@@ -136,7 +139,7 @@ public abstract class BatchWriter extends Writer {
     public Set<Long> memDefIds;
 
     public DefInfo (DefInfo outer, Ref.Global id, String name, Kind kind, Flavor flavor,
-                    boolean exported, int offset, int bodyStart, int bodyEnd) {
+                    boolean exported, Access access, int offset, int bodyStart, int bodyEnd) {
       Preconditions.checkArgument(id != null);
       this.outer = outer;
       this.id = id;
@@ -144,6 +147,7 @@ public abstract class BatchWriter extends Writer {
       this.kind = kind;
       this.flavor = flavor;
       this.exported = exported;
+      this.access = access;
       this.offset = offset;
       this.bodyStart = bodyStart;
       this.bodyEnd = bodyEnd;
@@ -163,7 +167,7 @@ public abstract class BatchWriter extends Writer {
     public Def toDef (ProjectStore store, Long defId, Long outerId) {
       this.defId = defId;
       if (outer != null) outer.noteMemDef(defId);
-      return new Def(store, defId, outerId, kind, flavor, exported, name,
+      return new Def(store, defId, outerId, kind, flavor, exported, access, name,
                      offset, bodyStart, bodyEnd);
     }
 
