@@ -223,19 +223,17 @@ public class Utils {
 
     @Override public void visitVarDef (JCVariableDecl tree) {
       try {
-        int vpos = 0;
         String name = tree.name.toString();
         if (_nested) {
           JCExpression oinit = tree.init;
           tree.init = null;
           super.visitVarDef(tree);
           tree.init = oinit;
-          vpos = _out.getBuffer().length()-name.length();
         } else {
-          vpos = _out.getBuffer().length();
           printExpr(tree.vartype);
           print(" " + name);
         }
+        int vpos = _out.getBuffer().length()-name.length();
         // we're either printing the sig for a plain old vardef, or we're nested, in which case
         // we're printing the signature for a method, but it has parameters, and 'id' is the method
         // id, so we need to append the var name to get the var def id
