@@ -63,6 +63,11 @@ public final class Def implements Element {
     return project.doc(id);
   }
 
+  /** Resolves and returns the members nested directly under this def. */
+  public Iterable<Def> members () {
+    return project.memberDefs(id);
+  }
+
   /** Returns a global reference to this def. */
   public Ref.Global globalRef () {
     Ref.Global ref = project.ref(id);
@@ -117,6 +122,7 @@ public final class Def implements Element {
   }
 
   protected String toFqName (Ref.Global ref) {
+    if (ref == Ref.Global.ROOT) return "";
     Lang lang = Lang.forExt(source().fileExt());
     StringBuilder sb = new StringBuilder();
     toFqName(ref, lang, sb);
