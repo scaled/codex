@@ -85,6 +85,11 @@ public final class Def implements Element {
     return project.memberDefs(id);
   }
 
+  /** Resolves and returns this def's enclosing def. Returns null if it is not enclosed. */
+  public Def outer () {
+    return (outerId == null) ? null : project.def(outerId);
+  }
+
   /** Returns a global reference to this def. */
   public Ref.Global globalRef () {
     Ref.Global ref = project.ref(id);
