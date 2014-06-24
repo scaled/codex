@@ -80,6 +80,7 @@ public class Utils {
     public SigPrinter (StringWriter out, Ref.Global id, Name enclClassName) {
       super(out, false);
       _out = out;
+      _buf = _out.getBuffer();
       _id = id;
       _enclClassName = enclClassName;
     }
@@ -98,6 +99,7 @@ public class Utils {
     }
 
     private final StringWriter _out;
+    private final StringBuffer _buf;
     private final Ref.Global _id;
     private final Name _enclClassName;
     private List<DeferredWrite> _writes = List.nil();
@@ -114,10 +116,10 @@ public class Utils {
     @Override public void printAnnotations (List<JCAnnotation> trees) {
       try {
         while (trees.nonEmpty()) {
-          int olen = _out.getBuffer().length();
+          int olen = _buf.length();
           printStat(trees.head);
           // if the annotation wasn't ommitted, add a space after it
-          if (_out.getBuffer().length() > olen) print(" ");
+          if (_buf.length() > olen) print(" ");
           trees = trees.tail;
         }
       } catch (IOException ioe) {
@@ -132,7 +134,7 @@ public class Utils {
         printFlags(tree.mods.flags);
         if ((tree.mods.flags & Flags.INTERFACE) != 0) {
           print("interface " + _enclClassName);
-          cpos = _out.getBuffer().length() - _enclClassName.toString().length();
+          cpos = _buf.length() - _enclClassName.toString().length();
           printTypeParameters(tree.typarams);
           if (tree.implementing.nonEmpty()) {
             print(" extends ");
@@ -141,7 +143,7 @@ public class Utils {
         } else {
           if ((tree.mods.flags & Flags.ENUM) != 0) print("enum " + _enclClassName);
           else print("class " + _enclClassName);
-          cpos = _out.getBuffer().length() - _enclClassName.toString().length();
+          cpos = _buf.length() - _enclClassName.toString().length();
           printTypeParameters(tree.typarams);
           if (tree.extending != null) {
             print(" extends ");
@@ -171,7 +173,7 @@ public class Utils {
             printExpr(tree.restype);
             print(" ");
           }
-          int mpos = _out.getBuffer().length();
+          int mpos = _buf.length();
           String mname = isCtor ? _enclClassName.toString() : tree.name.toString();
           print(mname);
           print("(");
@@ -195,13 +197,22 @@ public class Utils {
 
     @Override public void visitTypeParameter (JCTypeParameter tree) {
       // note the start of the buffer as that's where the type parameter appears
-      int tpos = _out.getBuffer().length();
+      int tpos = _buf.length();
       // now format the type parameter expression (which may be T extends Foo, etc.)
       super.visitTypeParameter(tree);
       // if we're generating the signature for a class, we need to append the type param name to id
       // to get our id, otherwise id is our id as is
       String name = tree.name.toString();
       addSigDef((_enclClassName != null) ? _id.plus(name) : _id, name, Kind.TYPE, tpos);
+    }
+
+    @Override public void visitTypeIdent (JCPrimitiveTypeTree tree) {
+      int tpos = _buf.length();
+      super.visitTypeIdent(tree);
+      String name = _buf.substring(tpos, _buf.length());
+      // this use will not resolve to anything, but at least we'll have a properly kinded use for
+      // this primitive type which will make code colorization work uniformly
+      addSigUse(Ref.Global.ROOT.plus(name), name, Kind.TYPE, tpos);
     }
 
     @Override public void visitAnnotation (JCAnnotation tree) {
@@ -233,7 +244,7 @@ public class Utils {
           printExpr(tree.vartype);
           print(" " + name);
         }
-        int vpos = _out.getBuffer().length()-name.length();
+        int vpos = _buf.length()-name.length();
         // we're either printing the sig for a plain old vardef, or we're nested, in which case
         // we're printing the signature for a method, but it has parameters, and 'id' is the method
         // id, so we need to append the var name to get the var def id
@@ -246,7 +257,7 @@ public class Utils {
     @Override public void visitIdent (JCIdent tree) {
       if (tree.sym != null) {
         addSigUse(targetForTypeSym(tree.sym), tree.name.toString(), kindForSym(tree.sym),
-                  _out.getBuffer().length());
+                  _buf.length());
       }
       super.visitIdent(tree);
     }
