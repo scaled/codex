@@ -24,9 +24,9 @@ public abstract class BatchWriter extends Writer {
   }
 
   @Override public void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
-                                 boolean exported, int offset, int bodyOffset, int bodyEnd) {
-    _curDef = _curDef.addDef(new DefInfo(_curDef, id, name, kind, flavor,
-                                         exported, offset, bodyOffset, bodyEnd));
+                                 boolean exported, int offset, int bodyStart, int bodyEnd) {
+    _curDef = _curDef.addDef(new DefInfo(_curDef, id, name, kind, flavor, exported,
+                                         offset, bodyStart, bodyEnd));
   }
 
   @Override public void emitRelation (Relation relation, Ref.Global target) {
@@ -124,7 +124,7 @@ public abstract class BatchWriter extends Writer {
     public final Flavor flavor;
     public final boolean exported;
     public final int offset;
-    public final int bodyOffset;
+    public final int bodyStart;
     public final int bodyEnd;
 
     public SigInfo sig;
@@ -136,7 +136,7 @@ public abstract class BatchWriter extends Writer {
     public Set<Long> memDefIds;
 
     public DefInfo (DefInfo outer, Ref.Global id, String name, Kind kind, Flavor flavor,
-                    boolean exported, int offset, int bodyOffset, int bodyEnd) {
+                    boolean exported, int offset, int bodyStart, int bodyEnd) {
       Preconditions.checkArgument(id != null);
       this.outer = outer;
       this.id = id;
@@ -145,7 +145,7 @@ public abstract class BatchWriter extends Writer {
       this.flavor = flavor;
       this.exported = exported;
       this.offset = offset;
-      this.bodyOffset = bodyOffset;
+      this.bodyStart = bodyStart;
       this.bodyEnd = bodyEnd;
     }
 
@@ -163,7 +163,8 @@ public abstract class BatchWriter extends Writer {
     public Def toDef (ProjectStore store, Long defId, Long outerId) {
       this.defId = defId;
       if (outer != null) outer.noteMemDef(defId);
-      return new Def(store, defId, outerId, kind, exported, name, offset);
+      return new Def(store, defId, outerId, kind, flavor, exported, name,
+                     offset, bodyStart, bodyEnd);
     }
 
     private void noteMemDef (Long defId) {

@@ -473,5 +473,5 @@ public class MapDBStore extends ProjectStore {
   private final BTreeMap<Long,String> _refsById;
   private final RefTree _projectRefs;
 
-  private static final int SCHEMA_VERS = 1;
+  private static final int SCHEMA_VERS = 2;
 }

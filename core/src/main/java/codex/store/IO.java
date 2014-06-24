@@ -117,16 +117,20 @@ public class IO {
 
   public static Def readDef (DataInput in, ProjectStore store) throws IOException {
     return new Def(store, in.readLong() /*id*/, zero2null(in.readLong()) /*outerId*/,
-                   readKind(in) /*kind*/, in.readBoolean() /*exported*/, in.readUTF() /*name*/,
-                   in.readInt() /*offset*/);
+                   readKind(in), readFlavor(in), in.readBoolean() /*exported*/,
+                   in.readUTF() /*name*/, in.readInt() /*offset*/,
+                   in.readInt() /*bodyStart*/, in.readInt() /*bodyEnd*/);
   }
   public static void writeDef (DataOutput out, Def def) throws IOException {
     out.writeLong(def.id);
     out.writeLong(null2zero(def.outerId));
     writeKind(out, def.kind);
+    writeFlavor(out, def.flavor);
     out.writeBoolean(def.exported);
     out.writeUTF(def.name);
     out.writeInt(def.offset);
+    out.writeInt(def.bodyStart);
+    out.writeInt(def.bodyEnd);
   }
 
   public static List<Def> readDefs (DataInput in, ProjectStore store) throws IOException {
@@ -167,6 +171,13 @@ public class IO {
   }
   public static void writeKind (DataOutput out, Kind kind) throws IOException {
     out.writeUTF(kind.name());
+  }
+
+  public static Flavor readFlavor (DataInput in) throws IOException {
+    return Enum.valueOf(Flavor.class, in.readUTF());
+  }
+  public static void writeFlavor (DataOutput out, Flavor flavor) throws IOException {
+    out.writeUTF(flavor.name());
   }
 
   public static Ref readRef (DataInput in, ProjectStore store) throws IOException {

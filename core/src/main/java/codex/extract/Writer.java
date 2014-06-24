@@ -37,7 +37,7 @@ public abstract class Writer {
   public abstract void openUnit (Source source);
 
   public abstract void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
-                                boolean exported, int offset, int bodyOffset, int bodyEnd);
+                                boolean exported, int offset, int bodyStart, int bodyEnd);
 
   public abstract void emitRelation (Relation relation, Ref.Global target);
 

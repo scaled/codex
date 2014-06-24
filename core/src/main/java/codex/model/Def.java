@@ -27,6 +27,9 @@ public final class Def implements Element {
   /** The kind of the def. */
   public final Kind kind;
 
+  /** The flavor of the def. */
+  public final Flavor flavor;
+
   /** Whether or not this def is visible outside its compilation unit. */
   public final boolean exported;
 
@@ -36,16 +39,25 @@ public final class Def implements Element {
   /** The character offset in the source text at which this def occurs. */
   public final int offset;
 
-  public Def (ProjectStore project, Long id, Long outerId, Kind kind, boolean exported,
-              String name, int offset) {
+  /** The character offset at which this def's body starts. */
+  public final int bodyStart;
+
+  /** The character offset at which this def's body ends. */
+  public final int bodyEnd;
+
+  public Def (ProjectStore project, Long id, Long outerId, Kind kind, Flavor flavor,
+              boolean exported, String name, int offset, int bodyStart, int bodyEnd) {
     assert project != null;
     this.project = project;
     this.id = id;
     this.outerId = outerId;
     this.kind = kind;
+    this.flavor = flavor;
     this.exported = exported;
     this.name = name;
     this.offset = offset;
+    this.bodyStart = bodyStart;
+    this.bodyEnd = bodyEnd;
   }
 
   /** Resolves and returns the source file in which this def occurs. */
@@ -97,10 +109,11 @@ public final class Def implements Element {
   }
 
   /** Returns true if this def is structurally equal to {@code other}. */
-  public boolean equals (Def other) {
-    return (project == other.project && id.equals(other.id) &&
-            Objects.equals(outerId, other.outerId) && kind == other.kind &&
-            exported == other.exported && name.equals(other.name) && offset == other.offset);
+  public boolean equals (Def od) {
+    return (project == od.project && id.equals(od.id) &&
+            Objects.equals(outerId, od.outerId) && kind == od.kind && flavor == od.flavor &&
+            exported == od.exported && name.equals(od.name) && offset == od.offset &&
+            bodyStart == od.bodyStart && bodyEnd == od.bodyEnd);
   }
 
   @Override public Ref ref () { return Ref.local(project, id); }
