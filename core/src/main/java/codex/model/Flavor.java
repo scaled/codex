@@ -14,6 +14,13 @@ package codex.model;
  */
 public enum Flavor {
 
+  // module flavors
+
+  /** A package (Java, Scala). */
+  PACKAGE,
+  /** A namespace (C#, C++). */
+  NAMESPACE,
+
   // type flavors
 
   /** A plain old class (Java, etc.). */

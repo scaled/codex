@@ -53,7 +53,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     String pname = unit.packge.toString();
     _id = _id.plus(pname);
     int offset = _text.indexOf(pname, unit.pos);
-    writer.openDef(_id, pname, Kind.MODULE, Flavor.NONE, true, Access.PUBLIC,
+    writer.openDef(_id, pname, Kind.MODULE, Flavor.PACKAGE, true, Access.PUBLIC,
                    offset, 0, _text.length()); // TODO: this bodystart/end is kind of bogus
     writer.emitSig(pname);
     super.visitCompilationUnit(node, writer);
