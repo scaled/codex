@@ -103,6 +103,12 @@ public class Utils {
     private List<DeferredWrite> _writes = List.nil();
     private boolean _nested = false;
 
+    @Override public void printFlags (long flags) throws IOException {
+      // omit some flags from printing
+      super.printFlags(flags & ~Flags.INTERFACE & ~Flags.PUBLIC & ~Flags.PROTECTED &
+                       ~Flags.PRIVATE);
+    }
+
     @Override public void printBlock (List<? extends JCTree> stats) {} // noop!
     @Override public void printEnumBody (List<JCTree> stats) {} // noop!
     @Override public void printAnnotations (List<JCAnnotation> trees) {
@@ -123,7 +129,7 @@ public class Utils {
       try {
         int cpos = 0;
         printAnnotations(tree.mods.annotations);
-        printFlags(tree.mods.flags & ~Flags.INTERFACE);
+        printFlags(tree.mods.flags);
         if ((tree.mods.flags & Flags.INTERFACE) != 0) {
           print("interface " + _enclClassName);
           cpos = _out.getBuffer().length() - _enclClassName.toString().length();
@@ -158,8 +164,7 @@ public class Utils {
         boolean isCtor = tree.name == tree.name.table.names.init;
         if (!isCtor || _enclClassName != null) {
           _nested = true;
-          // TEMP: try life without modifiers
-          // printExpr(tree.mods)
+          printExpr(tree.mods);
           // type parameters are now extracted into separate defs
           // printTypeParameters(tree.typarams)
           if (!isCtor) {
@@ -172,11 +177,10 @@ public class Utils {
           print("(");
           printExprs(tree.params);
           print(")");
-          // omit throws from signatures
-          // if (tree.thrown.nonEmpty()) {
-          //   print("\n  throws ");
-          //   printExprs(tree.thrown);
-          // }
+          if (tree.thrown.nonEmpty()) {
+            print("\n  throws ");
+            printExprs(tree.thrown);
+          }
           if (tree.defaultValue != null) {
             print(" default ");
             printExpr(tree.defaultValue);

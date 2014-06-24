@@ -7,7 +7,6 @@ package codex;
 import codex.extract.JavaExtractor;
 import codex.model.*;
 import codex.store.*;
-import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -67,7 +66,7 @@ public class SimpleCodexTest {
   }
 
   /*@Test*/ public void testFileCodexPerf () throws IOException {
-    MapDBStore store = new MapDBStore(new File("test-codex"));
+    MapDBStore store = new MapDBStore(Paths.get("test-codex"));
     JavaExtractor extract = new JavaExtractor();
     if (false) {
       String zip = System.getProperty("user.home") +
@@ -97,7 +96,7 @@ public class SimpleCodexTest {
     assertTrue(locdef.isPresent());
     Def def = locdef.get();
     assertTrue(def.source().toString().endsWith("Ref.java"));
-    assertEquals("public static final class Local extends Ref", def.sig().get().text);
+    assertEquals("static final class Local extends Ref", def.sig().get().text);
   }
 
   @Test public void testFindName () {
