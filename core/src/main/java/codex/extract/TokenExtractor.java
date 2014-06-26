@@ -8,6 +8,8 @@ import codex.model.*;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FilterReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -31,8 +33,7 @@ public class TokenExtractor implements Extractor {
     try {
       for (Path file : files) {
         try {
-          process(new Source.File(file.toString()),
-                  Files.newBufferedReader(file, StandardCharsets.UTF_8), writer);
+          process(new Source.File(file.toString()), new FileReader(file.toFile()), writer);
         } catch (IOException e) {
           e.printStackTrace(System.err);
         }
@@ -66,6 +67,19 @@ public class TokenExtractor implements Extractor {
     }
   }
 
+  // used to keep track of file offset since StreamTokenizer doesn't do that for us; note this
+  // relies on the fact that StreamTokenizer only ever calls Reader.read()
+  private class CountingReader extends FilterReader {
+    public int offset = 0;
+    public CountingReader (Reader reader) {
+      super(reader);
+    }
+    @Override public int read () throws IOException {
+      offset += 1;
+      return super.read();
+    }
+  }
+
   private void process (Source source, Reader reader, Writer writer) throws IOException {
     writer.openUnit(source);
 
@@ -76,7 +90,8 @@ public class TokenExtractor implements Extractor {
     Ref.Global curid = Ref.Global.ROOT;
     Deque<String> blocks = new ArrayDeque<>();
 
-    StreamTokenizer tok = toker(reader);
+    CountingReader counter = new CountingReader(new BufferedReader(reader));
+    StreamTokenizer tok = toker(counter);
     // treat # as a line comment starter in C# so that we ignore compiler directives
     if (lang == "cs") tok.commentChar('#');
 
@@ -112,9 +127,9 @@ public class TokenExtractor implements Extractor {
 
       } else if (tok.ttype == StreamTokenizer.TT_WORD) {
         if ("package".equals(prevtok) || "namespace".equals(prevtok)) {
-          int off = tok.lineno()-1; // TODO
           curdef = tok.sval;
           curid = curid.plus(curdef);
+          int off = counter.offset-curdef.length()-1;
           writer.openDef(curid, curdef, Kind.MODULE, Flavor.NONE, true, Access.PUBLIC,
                          off, off, off);
           // if the next token is a semicolon (or if this is Scala and the next token is not an open
@@ -136,7 +151,7 @@ public class TokenExtractor implements Extractor {
             }
             curdef = tok.sval;
             curid = curid.plus(curdef);
-            int off = tok.lineno()-1; // TODO
+            int off = counter.offset-curdef.length()-1;
             writer.openDef(curid, curdef, kind, Flavor.NONE, true, Access.PUBLIC, off, off, off);
           }
         }
@@ -165,8 +180,7 @@ public class TokenExtractor implements Extractor {
 
   /** Creates a {@link StreamTokenizer} configured for parsing C-like source code. */
   protected static StreamTokenizer toker (Reader reader) {
-    StreamTokenizer tok = new StreamTokenizer(
-      reader instanceof BufferedReader ? reader : new BufferedReader(reader));
+    StreamTokenizer tok = new StreamTokenizer(reader);
     tok.ordinaryChar('/'); // why do they call this a comment char by default?
     tok.wordChars('_', '_'); // allow _ in class names
     tok.slashSlashComments(true);
