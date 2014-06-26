@@ -23,33 +23,33 @@ public enum Flavor {
 
   // type flavors
 
-  /** A plain old class (Java, etc.). */
-  CLASS,
+  /** A type parameter. */
+  TYPE_PARAM,
+  /** A singleton object (Scala). */
+  OBJECT,
+  /** An annotation type (Java, etc.). */
+  ANNOTATION,
+  /** An enumeration (Java, etc.). */
+  ENUM,
   /** An interface (Java, etc.). */
   INTERFACE,
   /** An abstract class (Java, etc.). */
   ABSTRACT_CLASS,
-  /** An enumeration (Java, etc.). */
-  ENUM,
-  /** An annotation type (Java, etc.). */
-  ANNOTATION,
-  /** A singleton object (Scala). */
-  OBJECT,
+  /** A plain old class (Java, etc.). */
+  CLASS,
   /** An abstract singleton object (Scala). */
   ABSTRACT_OBJECT,
-  /** A type parameter. */
-  TYPE_PARAM,
 
   // func flavors
 
-  /** A normal class method (Java, etc.). */
-  METHOD,
-  /** An abstract (or interface) method (Java, etc.). */
-  ABSTRACT_METHOD,
-  /** A static method (Java, etc.). */
-  STATIC_METHOD,
   /** An object constructor (Java, etc.). */
   CONSTRUCTOR,
+  /** An abstract (or interface) method (Java, etc.). */
+  ABSTRACT_METHOD,
+  /** A normal class method (Java, etc.). */
+  METHOD,
+  /** A static method (Java, etc.). */
+  STATIC_METHOD,
 
   // term flavors
 
