@@ -45,7 +45,7 @@ public class TokenExtractorTest {
 
   @Test public void testBasics () throws IOException {
     TokenExtractor ex = new TokenExtractor();
-    MapDBStore store = new MapDBStore();
+    MapDBStore store = new MapDBStore("test");
     ex.process("TestA.scala", TESTA, store.writer);
     // store.visit(new Source.File("TestA.scala"), el -> System.out.println(el));
 

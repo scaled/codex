@@ -20,6 +20,11 @@ import java.util.function.Consumer;
 public abstract class ProjectStore implements AutoCloseable {
 
   /**
+   * The user friendly name of this project.
+   */
+  public final String name;
+
+  /**
    * Returns a writer that can be used to update this project.
    */
   public abstract Writer writer ();
@@ -112,5 +117,9 @@ public abstract class ProjectStore implements AutoCloseable {
       for (Use use : uses(def.id)) cons.accept(use);
     }
     return true;
+  }
+
+  protected ProjectStore (String name) {
+    this.name = name;
   }
 }

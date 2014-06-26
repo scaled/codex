@@ -203,12 +203,12 @@ public class MapDBStore extends ProjectStore {
     }
   };
 
-  public MapDBStore () {
-    this(null, DBMaker.newMemoryDB());
+  public MapDBStore (String name) {
+    this(name, null, DBMaker.newMemoryDB());
   }
 
-  public MapDBStore (Path store) {
-    this(store, DBMaker.newFileDB(store.toFile()).
+  public MapDBStore (String name, Path store) {
+    this(name, store, DBMaker.newFileDB(store.toFile()).
          mmapFileEnableIfSupported().
          cacheDisable().
          compressionEnable().
@@ -350,7 +350,8 @@ public class MapDBStore extends ProjectStore {
     return value;
   }
 
-  private MapDBStore (Path storePath, DBMaker<?> maker) {
+  private MapDBStore (String name, Path storePath, DBMaker<?> maker) {
+    super(name);
     BTreeKeySerializer<Long> longSz = BTreeKeySerializer.ZERO_OR_POSITIVE_LONG;
     BTreeKeySerializer<String> stringSz = BTreeKeySerializer.STRING;
 
