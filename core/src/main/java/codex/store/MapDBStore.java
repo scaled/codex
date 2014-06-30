@@ -93,20 +93,20 @@ public class MapDBStore extends ProjectStore {
         // create an empty ref tree for non-exported ref resolution
         RefTree sourceRefs = new EphemeralRefTree();
 
-        Def toDef (Long outerId, DefInfo inf) {
-          Long defId;
-          if (inf.exported) {
-            defId = _projectRefs.resolve(inf.id, nextExpId);
-            if (defId.equals(nextExpId)) nextExpId = nextUnusedExpId(defId);
-          } else {
-            defId = sourceRefs.resolve(inf.id, nextNonExpId);
-            if (defId.equals(nextNonExpId)) {
-              nextNonExpId += 1;
-              if (nextNonExpId > maxNonExpId) throw new IllegalStateException(
-                "Ack! Can't support more than "+ MAX_DEF_ID +" defs per source file.");
-            }
+        Long resolveSourceId (Ref.Global id) {
+          Long defId = sourceRefs.resolve(id, nextNonExpId);
+          if (defId.equals(nextNonExpId)) {
+            nextNonExpId += 1;
+            if (nextNonExpId > maxNonExpId) throw new IllegalStateException(
+              "Ack! Can't support more than "+ MAX_DEF_ID +" defs per source file.");
           }
-          return inf.toDef(MapDBStore.this, defId, outerId);
+          return defId;
+        }
+
+        Long resolveProjectId (Ref.Global id) {
+          Long defId = _projectRefs.resolve(id, nextExpId);
+          if (defId.equals(nextExpId)) nextExpId = nextUnusedExpId(defId);
+          return defId;
         }
 
         List<Use> resolveUses (List<UseInfo> infos) {
@@ -121,7 +121,8 @@ public class MapDBStore extends ProjectStore {
         }
 
         void storeDef (DefInfo inf) {
-          Def def = toDef(inf.outer.defId, inf);
+          Long defId = inf.exported ? resolveProjectId(inf.id) : resolveSourceId(inf.id);
+          Def def = inf.toDef(MapDBStore.this, defId, inf.outer.defId);
           _defs.put(def.id, def);
           newSourceIds.add(def.id);
           if (def.outerId == null) _topDefs.add(def.id);
@@ -131,7 +132,13 @@ public class MapDBStore extends ProjectStore {
         void storeData (DefInfo inf) {
           if (inf.sig != null) {
             List<Def> defs = new ArrayList<>();
-            if (inf.sig.defs != null) for (DefInfo def : inf.sig.defs) defs.add(toDef(null, def));
+            if (inf.sig.defs != null) for (DefInfo def : inf.sig.defs) {
+              // we'll never assign an exported id for a sigdef, but one may already exist
+              Long defId = _projectRefs.get(inf.id);
+              // otherwise resolve (and potentially create) a source-local id
+              if (defId == null) defId = resolveSourceId(inf.id);
+              defs.add(inf.toDef(MapDBStore.this, defId, null));
+            }
             _defSig.put(inf.defId, new Sig(inf.sig.text, defs, resolveUses(inf.sig.uses)));
           }
           if (inf.doc != null) {
