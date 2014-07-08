@@ -269,7 +269,7 @@ public class MapDBStore extends ProjectStore {
   @Override public Iterable<Def> sourceDefs (Source source) {
     Long unitId = _srcToId.get(source.toString());
     if (unitId == null) throw new IllegalArgumentException("Unknown source " + source);
-    return Iterables.transform(_srcDefs.get(unitId), id -> _defs.get(id));
+    return Iterables.transform(_srcDefs.get(unitId), this::def);
   }
 
   @Override public Optional<Def> def (Ref.Global ref) {
@@ -288,7 +288,7 @@ public class MapDBStore extends ProjectStore {
 
   @Override public Iterable<Def> memberDefs (Long defId) {
     Set<Long> ids = _defMems.get(defId);
-    return (ids == null) ? Collections.emptyList() : Iterables.transform(ids, id -> _defs.get(id));
+    return (ids == null) ? Collections.emptyList() : Iterables.transform(ids, this::def);
   }
 
   @Override public List<Use> uses (Long defId) {
@@ -349,7 +349,7 @@ public class MapDBStore extends ProjectStore {
 
   private Iterable<Def> defs (Long defId, Iterable<Long> defIds) {
     reqdef(defId, defIds);
-    return Iterables.transform(defIds, id -> _defs.get(id));
+    return Iterables.transform(defIds, this::def);
   }
 
   private <T> T reqdef (Long defId, T value) {
