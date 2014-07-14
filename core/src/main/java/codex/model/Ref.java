@@ -5,6 +5,7 @@
 package codex.model;
 
 import codex.store.ProjectStore;
+import java.util.Optional;
 
 /**
  * Uniquely identifies a def. This comes in two flavors: a local ref, used within a project to
@@ -112,9 +113,27 @@ public abstract class Ref {
 
   /** Returns a global ref for the specified (outer- to inner-most) name path. */
   public static Ref global (String... names) {
-    Ref.Global ref = Ref.Global.ROOT;
+    Global ref = Global.ROOT;
     for (String name : names) ref = ref.plus(name);
     return ref;
+  }
+
+  /**
+   * Resolves the {@link Def} for {@code ref} in {@code stores}.
+   */
+  public static Optional<Def> resolve (Iterable<ProjectStore> stores, Ref ref) {
+    if (ref instanceof Local) {
+      Local lref = (Local)ref;
+      return Optional.of(lref.project.def(lref.defId));
+
+    } else {
+      Global gref = (Global)ref;
+      for (ProjectStore store : stores) {
+        Optional<Def> odef = store.def(gref);
+        if (odef.isPresent()) return odef;
+      }
+      return Optional.empty();
+    }
   }
 
   private Ref () {} // prevent other subclasses

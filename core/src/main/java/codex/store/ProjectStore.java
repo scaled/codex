@@ -4,7 +4,6 @@
 
 package codex.store;
 
-import codex.Codex;
 import codex.extract.Writer;
 import codex.model.*;
 import java.util.List;
@@ -93,7 +92,7 @@ public abstract class ProjectStore implements AutoCloseable {
    * @param expdOnly if true, include only exported defs in the results; if false, include exported
    * and non-exported defs.
    */
-  public abstract void find (Codex.Query query, boolean expOnly, List<Def> into);
+  public abstract void find (Query query, boolean expOnly, List<Def> into);
 
   /**
    * Returns a debug representation of {@code id}.

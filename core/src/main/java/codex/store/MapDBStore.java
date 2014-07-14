@@ -4,7 +4,6 @@
 
 package codex.store;
 
-import codex.Codex;
 import codex.extract.BatchWriter;
 import codex.extract.Writer;
 import codex.model.*;
@@ -319,7 +318,7 @@ public class MapDBStore extends ProjectStore {
     return pre + unitId + ":" + rawDefId;
   }
 
-  @Override public void find (Codex.Query query, boolean expOnly, List<Def> into) {
+  @Override public void find (Query query, boolean expOnly, List<Def> into) {
     boolean pre = query.prefix;
     String name = query.name;
     Fun.Tuple2<String,Long> lowKey = Fun.t2(name, null);

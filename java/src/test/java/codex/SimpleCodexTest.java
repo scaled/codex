@@ -28,6 +28,7 @@ import static org.junit.Assert.*;
 public class SimpleCodexTest {
 
   public static MapDBStore store;
+  public static List<ProjectStore> stores;
   public static JavaExtractor extract;
 
   public static List<Path> codexSources () throws IOException {
@@ -48,7 +49,8 @@ public class SimpleCodexTest {
   }
 
   @BeforeClass public static void populateStore () throws Exception {
-    store = new MapDBStore();
+    store = new MapDBStore("test");
+    stores = Collections.singletonList(store);
     List<Path> classpath = new ArrayList<>();
     for (URL url : ((URLClassLoader)SimpleCodexTest.class.getClassLoader()).getURLs()) {
       classpath.add(Paths.get(url.toURI()));
@@ -66,7 +68,7 @@ public class SimpleCodexTest {
   }
 
   /*@Test*/ public void testFileCodexPerf () throws IOException {
-    MapDBStore store = new MapDBStore(Paths.get("test-codex"));
+    MapDBStore store = new MapDBStore("test-codex", Paths.get("test-codex"));
     JavaExtractor extract = new JavaExtractor();
     if (false) {
       String zip = System.getProperty("user.home") +
@@ -81,18 +83,13 @@ public class SimpleCodexTest {
     store.close();
   }
 
-  public Codex simpleCodex () {
-    return new Codex.Simple(Collections.singletonList(store));
-  }
-
   // @Test public void testDump () {
   //   dump(store);
   // }
 
   @Test public void testSimpleCodex () {
-    Codex codex = simpleCodex();
     Ref locref = Ref.global("codex.model", "Ref", "Local");
-    Optional<Def> locdef = codex.resolve(locref);
+    Optional<Def> locdef = Ref.resolve(stores, locref);
     assertTrue(locdef.isPresent());
     Def def = locdef.get();
     assertTrue(def.source().toString().endsWith("Ref.java"));
@@ -100,15 +97,14 @@ public class SimpleCodexTest {
   }
 
   @Test public void testFindName () {
-    Codex codex = simpleCodex();
-    List<Def> refdefs = codex.find(Codex.Query.name("ref"));
+    List<Def> refdefs = Query.name("ref").find(stores);
     assertFalse(refdefs.isEmpty()); // should be lots of 'ref's
     for (Def refdef : refdefs) {
       assertEquals("ref", refdef.name.toLowerCase());
       // dump(refdef);
     }
 
-    List<Def> reftypes = codex.find(Codex.Query.name("ref").kind(Kind.TYPE));
+    List<Def> reftypes = Query.name("ref").kind(Kind.TYPE).find(stores);
     assertEquals(1, reftypes.size()); // should be only one Ref type
     for (Def refdef : reftypes) {
       assertTrue(store.source(refdef.id).toString().endsWith("Ref.java"));
@@ -116,8 +112,7 @@ public class SimpleCodexTest {
   }
 
   @Test public void testFindPrefix () {
-    Codex codex = simpleCodex();
-    List<Def> emits = codex.find(Codex.Query.prefix("EMIT"));
+    List<Def> emits = Query.prefix("EMIT").find(stores);
     assertTrue(emits.size() > 8); // should be quite a few emitFoo methods
     for (Def def : emits) {
       assertTrue(def.name.toLowerCase().startsWith("emit"));
