@@ -171,6 +171,12 @@ public abstract class BatchWriter extends Writer {
                      offset, bodyStart, bodyEnd);
     }
 
+    @Override public String toString () {
+      return String.format("DefInfo(%s, %s, %s, %s, %s, %s, %s, %d, %d, %d)",
+                           outer == null ? "null" : outer.name, id, name, kind, flavor, exported,
+                           access, offset, bodyStart, bodyEnd);
+    }
+
     private void noteMemDef (Long defId) {
       if (memDefIds == null) memDefIds = new HashSet<>();
       memDefIds.add(defId);
