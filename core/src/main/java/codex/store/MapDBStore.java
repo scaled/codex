@@ -8,6 +8,7 @@ import codex.extract.BatchWriter;
 import codex.extract.Writer;
 import codex.model.*;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -155,27 +156,24 @@ public class MapDBStore extends ProjectStore {
 
             // now update our member def ids mapping
             Set<Long> memDefIds;
+            if (!defSpansSources(def)) memDefIds = def.memDefIds;
             // if this def spans source files, do more complex member def merging
-            if (defSpansSources(def)) {
-              memDefIds = _defMems.get(def.defId);
-              if (memDefIds != null) memDefIds.removeAll(oldSourceIds);
-              memDefIds = union(memDefIds, def.memDefIds);
-            } else {
-              memDefIds = def.memDefIds;
+            else {
+              memDefIds = new HashSet<Long>();
+              Set<Long> oldMemDefIds = _defMems.get(def.defId);
+              if (oldMemDefIds != null) {
+                memDefIds.addAll(oldMemDefIds);
+                memDefIds.removeAll(oldSourceIds);
+              }
+              if (def.memDefIds != null) memDefIds.addAll(def.memDefIds);
             }
-            if (memDefIds == null) _defMems.remove(def.defId);
+            if (memDefIds == null || memDefIds.isEmpty()) _defMems.remove(def.defId);
             else _defMems.put(def.defId, memDefIds);
           }
         }
 
         boolean defSpansSources (DefInfo def) {
           return def.kind == Kind.MODULE; // TODO: have DefInfo self-report?
-        }
-
-        Set<Long> union (Set<Long> a, Set<Long> b) {
-          if (a == null) return b;
-          if (b != null) a.addAll(b);
-          return a;
         }
 
         void storeDatas (Iterable<DefInfo> defs) {
@@ -195,8 +193,8 @@ public class MapDBStore extends ProjectStore {
       }.run();
 
       // filter the reused source ids from the old source ids and delete any that remain
-      oldSourceIds.removeAll(newSourceIds);
-      if (!oldSourceIds.isEmpty()) removeDefs(oldSourceIds);
+      Set<Long> staleIds = Sets.difference(oldSourceIds, newSourceIds).immutableCopy();
+      if (!staleIds.isEmpty()) removeDefs(staleIds);
       _srcDefs.put(unitId, newSourceIds);
       _srcInfo.put(unitId, new IO.SourceInfo(srcKey, indexed));
 
