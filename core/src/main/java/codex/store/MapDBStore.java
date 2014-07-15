@@ -132,12 +132,12 @@ public class MapDBStore extends ProjectStore {
         void storeData (DefInfo inf) {
           if (inf.sig != null) {
             List<Def> defs = new ArrayList<>();
-            if (inf.sig.defs != null) for (DefInfo def : inf.sig.defs) {
+            if (inf.sig.defs != null) for (DefInfo sdef : inf.sig.defs) {
               // we'll never assign an exported id for a sigdef, but one may already exist
-              Long defId = _projectRefs.get(inf.id);
+              Long defId = _projectRefs.get(sdef.id);
               // otherwise resolve (and potentially create) a source-local id
-              if (defId == null) defId = resolveSourceId(inf.id);
-              defs.add(inf.toDef(MapDBStore.this, defId, null));
+              if (defId == null) defId = resolveSourceId(sdef.id);
+              defs.add(sdef.toDef(MapDBStore.this, defId, null));
             }
             _defSig.put(inf.defId, new Sig(inf.sig.text, defs, resolveUses(inf.sig.uses)));
           }
