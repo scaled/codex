@@ -54,4 +54,23 @@ public class TokenExtractorTest {
     assertTrue(bdef.isPresent());
     assertEquals("baz", bdef.get().name);
   }
+
+  public final String LIST = Joiner.on("\n").join(
+    "package com.test",
+    "",
+    "abstract class List[+A] extends Iterable[A] {",
+    "  def map[B] (f :(A => B)) :List[B]",
+    "}");
+
+  @Test public void testTypeParams () throws IOException {
+    TokenExtractor ex = new TokenExtractor();
+    MapDBStore store = new MapDBStore("test");
+    ex.process("List.scala", LIST, store.writer);
+    // store.visit(new Source.File("List.scala"), el -> System.out.println(el));
+
+    Ref.Global map = Ref.Global.fromString("com.test List map");
+    Optional<Def> mdef = store.def(map);
+    assertTrue(mdef.isPresent());
+    assertEquals("map", mdef.get().name);
+  }
 }
