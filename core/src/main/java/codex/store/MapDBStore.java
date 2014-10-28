@@ -376,8 +376,11 @@ public class MapDBStore extends ProjectStore {
         String storeName = storePath.getFileName().toString();
         assert storeName.length() > 0;
         try {
-          for (Path file : Files.list(storePath.getParent()).collect(Collectors.toList())) {
-            if (file.getFileName().toString().startsWith(storeName)) Files.delete(file);
+          Path parent = storePath.getParent();
+          if (parent != null && Files.exists(parent)) {
+            for (Path file : Files.list(parent).collect(Collectors.toList())) {
+              if (file.getFileName().toString().startsWith(storeName)) Files.delete(file);
+            }
           }
         } catch (IOException ioe) {
           System.err.println("Error deleting stale database: " + ioe);
