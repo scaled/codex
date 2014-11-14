@@ -134,7 +134,7 @@ public class SimpleCodexTest {
     System.out.print(indent);
     System.out.println(store.sig(def.id).map(s -> s.text).orElse(def.toString()));
     String mindent = indent + "  ";
-    for (Def mdef : store.memberDefs(def.id)) {
+    for (Def mdef : store.defsIn(def.id)) {
       dump(store, mdef, mindent);
     }
   }

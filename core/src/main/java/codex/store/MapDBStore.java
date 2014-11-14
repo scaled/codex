@@ -283,7 +283,7 @@ public class MapDBStore extends ProjectStore {
     return reqdef(defId, _defs.get(defId));
   }
 
-  @Override public Iterable<Def> memberDefs (Long defId) {
+  @Override public Iterable<Def> defsIn (Long defId) {
     Set<Long> ids = _defMems.get(defId);
     return (ids == null) ? Collections.emptyList() : Iterables.transform(ids, this::def);
   }

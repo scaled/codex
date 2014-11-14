@@ -82,7 +82,7 @@ public final class Def implements Element {
 
   /** Resolves and returns the members nested directly under this def. */
   public Iterable<Def> members () {
-    return project.memberDefs(id);
+    return project.defsIn(id);
   }
 
   /** Resolves and returns this def's enclosing def. Returns null if it is not enclosed. */

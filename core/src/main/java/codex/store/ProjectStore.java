@@ -66,7 +66,7 @@ public abstract class ProjectStore implements AutoCloseable {
    * or more levels deep.
    * @throws NoSuchElementException if no def exists with that id.
    */
-  public abstract Iterable<Def> memberDefs (Long defId);
+  public abstract Iterable<Def> defsIn (Long defId);
 
   /**
    * Returns all uses nested immediately inside {@code defId}. This does not return uses nested
