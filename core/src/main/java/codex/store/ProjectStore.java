@@ -74,7 +74,7 @@ public abstract class ProjectStore implements AutoCloseable {
    * body of {@code defId}.
    * @throws NoSuchElementException if no def exists with that id.
    */
-  public abstract List<Use> uses (Long defId);
+  public abstract List<Use> usesIn (Long defId);
 
   /** Returns the signature for {@code defId}. */
   public abstract Optional<Sig> sig (Long defId);
@@ -113,7 +113,7 @@ public abstract class ProjectStore implements AutoCloseable {
     if (lastIndexed(source) == 0L) return false;
     for (Def def : sourceDefs(source)) {
       cons.accept(def);
-      for (Use use : uses(def.id)) cons.accept(use);
+      for (Use use : usesIn(def.id)) cons.accept(use);
     }
     return true;
   }

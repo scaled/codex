@@ -288,7 +288,7 @@ public class MapDBStore extends ProjectStore {
     return (ids == null) ? Collections.emptyList() : Iterables.transform(ids, this::def);
   }
 
-  @Override public List<Use> uses (Long defId) {
+  @Override public List<Use> usesIn (Long defId) {
     List<Use> uses = _defUses.get(defId);
     return (uses == null) ? Collections.emptyList() : uses;
   }
