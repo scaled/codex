@@ -7,6 +7,7 @@ package codex.store;
 import codex.extract.Writer;
 import codex.model.*;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -75,6 +76,13 @@ public abstract class ProjectStore implements AutoCloseable {
    * @throws NoSuchElementException if no def exists with that id.
    */
   public abstract List<Use> usesIn (Long defId);
+
+  /**
+   * Returns all uses of {@code def} which appear in any compilation units in this project. The def
+   * need not originate from this project. The returned uses are returned as a mapping from source
+   * file to the character offsets in said source file at which each use occurs.
+   */
+  public abstract Map<Source,int[]> usesOf (Def def);
 
   /** Returns the signature for {@code defId}. */
   public abstract Optional<Sig> sig (Long defId);

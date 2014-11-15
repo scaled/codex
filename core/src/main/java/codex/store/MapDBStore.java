@@ -67,14 +67,15 @@ public class MapDBStore extends ProjectStore {
 
       // resolve the unit id for this source
       String srcKey = source.toString();
-      Long uId = _srcToId.get(srcKey);
-      if (uId == null) _srcToId.put(srcKey, uId = _srcToId.size()+1L);
-      Long unitId = uId;
+      Long unitId = _srcToId.computeIfAbsent(srcKey, unused -> _srcToId.size()+1L);
 
       // load the ids of existing defs in this source
-      Set<Long> osIds = _srcDefs.get(unitId);
-      Set<Long> oldSourceIds = (osIds == null) ? new HashSet<>() : osIds;
+      Set<Long> oldSourceIds = _srcDefs.getOrDefault(unitId, new HashSet<>());
       Set<Long> newSourceIds = new HashSet<>();
+
+      // track all refs to defs defined outside this compunit
+      Set<Long> localRefs = new HashSet<>();
+      Set<Ref.Global> globalRefs = new HashSet<>();
 
       // wrap this computation up in an object so that we don't have to pass so damned many
       // arguments around; yay for lack of nested functions
@@ -109,17 +110,6 @@ public class MapDBStore extends ProjectStore {
           return defId;
         }
 
-        List<Use> resolveUses (List<UseInfo> infos) {
-          if (infos == null) return Collections.emptyList();
-          List<Use> uses = new ArrayList<>();
-          for (UseInfo info : infos) {
-            Long tgtId = sourceRefs.get(info.ref);
-            if (tgtId == null) tgtId = _projectRefs.get(info.ref);
-            uses.add(info.resolve(MapDBStore.this, tgtId));
-          }
-          return uses;
-        }
-
         void storeDef (DefInfo inf) {
           Long defId = inf.exported ? resolveProjectId(inf.id) : resolveSourceId(inf.id);
           Def def = inf.toDef(MapDBStore.this, defId, inf.outer.defId);
@@ -127,26 +117,6 @@ public class MapDBStore extends ProjectStore {
           newSourceIds.add(def.id);
           if (def.outerId == null) _topDefs.add(def.id);
           _indices.get(def.kind).add(Fun.t2(def.name.toLowerCase(), def.id));
-        }
-
-        void storeData (DefInfo inf) {
-          if (inf.sig != null) {
-            List<Def> defs = new ArrayList<>();
-            if (inf.sig.defs != null) for (DefInfo sdef : inf.sig.defs) {
-              // we'll never assign an exported id for a sigdef, but one may already exist
-              Long defId = _projectRefs.get(sdef.id);
-              // otherwise resolve (and potentially create) a source-local id
-              if (defId == null) defId = resolveSourceId(sdef.id);
-              defs.add(sdef.toDef(MapDBStore.this, defId, null));
-            }
-            _defSig.put(inf.defId, new Sig(inf.sig.text, defs, resolveUses(inf.sig.uses)));
-          }
-          if (inf.doc != null) {
-            List<Use> uses = resolveUses(inf.doc.uses);
-            _defDoc.put(inf.defId, new Doc(inf.doc.offset, inf.doc.length, uses));
-          }
-          if (inf.uses == null) _defUses.remove(inf.defId);
-          else _defUses.put(inf.defId, resolveUses(inf.uses));
         }
 
         void storeDefs (Iterable<DefInfo> defs) {
@@ -176,6 +146,54 @@ public class MapDBStore extends ProjectStore {
           return def.kind == Kind.MODULE; // TODO: have DefInfo self-report?
         }
 
+        void storeData (DefInfo inf) {
+          if (inf.sig != null) {
+            List<Def> defs = new ArrayList<>();
+            if (inf.sig.defs != null) for (DefInfo sdef : inf.sig.defs) {
+              // we'll never assign an exported id for a sigdef, but one may already exist
+              Long defId = _projectRefs.get(sdef.id);
+              // otherwise resolve (and potentially create) a source-local id
+              if (defId == null) defId = resolveSourceId(sdef.id);
+              defs.add(sdef.toDef(MapDBStore.this, defId, null));
+            }
+            _defSig.put(inf.defId, new Sig(inf.sig.text, defs, resolveUses(inf.sig.uses)));
+          }
+
+          if (inf.doc != null) {
+            List<Use> uses = resolveUses(inf.doc.uses);
+            _defDoc.put(inf.defId, new Doc(inf.doc.offset, inf.doc.length, uses));
+          }
+
+          if (inf.uses == null) _defUses.remove(inf.defId);
+          else {
+            List<Use> uses = resolveUses(inf.uses);
+            _defUses.put(inf.defId, uses);
+            // record all refs made from this compunit
+            for (Use use : uses) {
+              Ref ref = use.ref();
+              if (ref instanceof Ref.Local) {
+                // omit refs to defs that originated in this compunit; when searching for refs to a
+                // def, we always include its defining compunit in the search, so we don't need to
+                // add that compunit to the index; this drastically reduces the size of the index
+                // because the vast majority of defs are not referenced outside their compunit
+                Long defId = ((Ref.Local)ref).defId;
+                if (toUnitId(defId) != unitId) localRefs.add(defId);
+              } else globalRefs.add((Ref.Global)ref);
+            }
+          }
+        }
+
+        List<Use> resolveUses (List<UseInfo> infos) {
+          if (infos == null) return Collections.emptyList();
+          List<Use> uses = new ArrayList<>();
+          for (UseInfo info : infos) {
+            Long tgtId = sourceRefs.get(info.ref);
+            if (tgtId == null) tgtId = _projectRefs.get(info.ref);
+            uses.add(info.resolve(MapDBStore.this, tgtId));
+          }
+          return uses;
+        }
+
         void storeDatas (Iterable<DefInfo> defs) {
           if (defs != null) for (DefInfo def : defs) {
             storeData(def);
@@ -191,6 +209,19 @@ public class MapDBStore extends ProjectStore {
           storeDatas(topDef.defs);
         }
       }.run();
+
+      // update the indices for refs made in this compunit
+      for (Long refId : localRefs) {
+        Set<Long> units = _locUseSrcs.get(refId);
+        if (units == null) units = new HashSet<>();
+        if (units.add(unitId)) _locUseSrcs.put(refId, units);
+      }
+      for (Ref.Global ref : globalRefs) {
+        String refKey = ref.toString();
+        Set<Long> units = _gloUseSrcs.get(refKey);
+        if (units == null) units = new HashSet<>();
+        if (units.add(unitId)) _gloUseSrcs.put(refKey, units);
+      }
 
       // filter the reused source ids from the old source ids and delete any that remain
       Set<Long> staleIds = Sets.difference(oldSourceIds, newSourceIds).immutableCopy();
@@ -291,6 +322,46 @@ public class MapDBStore extends ProjectStore {
   @Override public List<Use> usesIn (Long defId) {
     List<Use> uses = _defUses.get(defId);
     return (uses == null) ? Collections.emptyList() : uses;
+  }
+
+  @Override public Map<Source,int[]> usesOf (Def def) {
+    // determine whether we're looking for local or global refs
+    Ref ref;
+    Set<Long> unitIds;
+    if (def.project == this) {
+      ref = def.ref();
+      // since this def is local to this project, the comp unit that defines it is "implicit" in its
+      // unit ids set; so start with that, and then add any other unit ids that reference it
+      unitIds = new HashSet<>();
+      unitIds.add(toUnitId(def.id));
+      Set<Long> otherUnitIds = _locUseSrcs.get(def.id);
+      if (otherUnitIds != null) unitIds.addAll(otherUnitIds);
+    } else {
+      ref = def.globalRef();
+      unitIds = _gloUseSrcs.get(ref.toString());
+    }
+    if (unitIds == null) return Collections.emptyMap();
+
+    Map<Source,int[]> uses = new HashMap<>();
+    for (Long unitId : unitIds) {
+      IO.SourceInfo info = _srcInfo.get(unitId);
+      if (info == null) {
+        System.err.println("Def reports use in non-existent source " +
+                           "[def=" + def + ", unitId=" + unitId + "]");
+        continue;
+      }
+
+      // right now we brute force our way through all uses in matching comp units; if that turns out
+      // to be too expensive, we can include enclosing def ids in our index
+      List<Use> srcUses = new ArrayList<>();
+      for (Long defId : _srcDefs.get(unitId)) for (Use use : usesIn(defId)) {
+        if (use.ref().equals(ref)) srcUses.add(use);
+      }
+      int[] offsets = new int[srcUses.size()];
+      int ii = 0; for (Use use : srcUses) offsets[ii++] = use.offset();
+      uses.put(Source.fromString(info.source), offsets);
+    }
+    return uses;
   }
 
   @Override public Optional<Sig> sig (Long defId) {
@@ -414,6 +485,9 @@ public class MapDBStore extends ProjectStore {
       _defMems = createTreeMap("defMems", longSz, IO.IDS_SZ);
       _defUses = createTreeMap("defUses", longSz, new IO.UsesSerializer());
 
+      _locUseSrcs = createTreeMap("locUseSrcs", longSz, IO.IDS_SZ);
+      _gloUseSrcs = createTreeMap("gloUseSrcs", stringSz, IO.IDS_SZ);
+
       _indices = new HashMap<>();
       for (Kind kind : Kind.values()) {
         _indices.put(kind, _db.createTreeSet("idx"+kind).serializer(
@@ -476,6 +550,8 @@ public class MapDBStore extends ProjectStore {
   private final BTreeMap<Long,Set<Long>> _defMems;
   private final BTreeMap<Long,List<Use>> _defUses;
   private final Map<Kind,NavigableSet<Fun.Tuple2<String,Long>>> _indices;
+  private final BTreeMap<Long,Set<Long>> _locUseSrcs;
+  private final BTreeMap<String,Set<Long>> _gloUseSrcs;
 
   private final BTreeMap<String,Long> _refsByName;
   private final BTreeMap<Long,String> _refsById;
