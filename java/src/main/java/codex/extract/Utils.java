@@ -4,8 +4,8 @@
 
 package codex.extract;
 
-import codex.model.Ref;
 import codex.model.Kind;
+import codex.model.Ref;
 import com.google.common.collect.Sets;
 import com.sun.tools.javac.code.Flags;
 import com.sun.tools.javac.code.Symbol.*;
@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Collection;
 import java.util.Set;
+import javax.lang.model.element.ElementKind;
 
 public class Utils {
 
@@ -27,7 +28,8 @@ public class Utils {
   public static final Set<String> IGNORED_ANNS = Sets.newHashSet("Override", "SuppressWarnings");
 
   public static Kind kindForSym (Symbol sym) {
-    if (sym instanceof ClassSymbol || sym instanceof TypeSymbol) return Kind.TYPE;
+    if (sym instanceof PackageSymbol) return Kind.MODULE;
+    else if (sym instanceof ClassSymbol || sym instanceof TypeSymbol) return Kind.TYPE;
     else if (sym instanceof MethodSymbol) return Kind.FUNC;
     else if (sym instanceof VarSymbol) return Kind.VALUE;
     else throw new IllegalArgumentException("Unknown kind for " + sym);
