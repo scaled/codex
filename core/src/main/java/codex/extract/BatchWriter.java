@@ -57,6 +57,7 @@ public abstract class BatchWriter extends Writer {
   }
 
   @Override public void closeDef () {
+    if (_curDef.outer == null) throw new IllegalStateException("Cannot close topDef.");
     _curDef = _curDef.outer;
   }
   @Override public void closeUnit () {
