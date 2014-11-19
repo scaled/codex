@@ -45,27 +45,66 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
   @Override public Void visitCompilationUnit (CompilationUnitTree node, Writer writer) {
     JCCompilationUnit unit = (JCCompilationUnit)node;
-    _unit.push(unit);
-    if (unit.packge == null) {
-      System.err.println("Null package? " + unit); // TODO
-      return null;
+    if (_unit != null) throw new IllegalStateException(
+      "Nested compilation units?! [visiting=" + _unit + ", nested=" + unit + "]");
+    _unit = unit;
+    try {
+      if (unit.packge == null) {
+        System.err.println("Null package? " + unit); // TODO
+        return null;
+      }
+
+      // determine whether this is a package-info.java file
+      String fpath = unit.getSourceFile().toUri().toString();
+      String fname = fpath.substring(fpath.lastIndexOf('/')+1);
+      boolean isPackageInfo = fname.equals("package-info.java");
+
+      // the top-level id for a comp unit is always the package
+      String pname = unit.packge.toString();
+      _id = _id.plus(pname);
+      String pkgpre = "package ";
+      String pkgsig; // defined below
+
+      // if this is a package-info.java file, then it "defines" the package
+      if (isPackageInfo) pkgsig = pkgpre + pname;
+      // otherwise the package statement just represents a use of the package name
+      else {
+        // insert a synthetic def to capture all of the uses that occur before the first real def in
+        // the file (imports); we'll close this synthetic def when we see the first class; we can't
+        // allow this synthetic def to enclose the class defs as that would give them an incorrect
+        // fully qualified name
+        _id = _id.plus(fname);
+        pkgsig = pkgpre + pname + " (" + fname + ")";
+      }
+
+      _needCloseUnitDef = true;
+      writer.openDef(_id, pname, Kind.MODULE, Flavor.PACKAGE, true, Access.PUBLIC,
+                     // TODO: this bodystart/end is kind of bogus
+                     _text.indexOf(pname, unit.pos), 0, _text.length());
+      writer.emitSig(pkgpre + pname);
+      writer.emitSigDef(_id, pname, Kind.MODULE, pkgpre.length());
+      super.visitCompilationUnit(node, writer);
+
+      // alas hackery: the unit def is usually a "fake" def which just captures the imports in this
+      // compilation unit; it will already have been closed the first time we saw a class def, so we
+      // only close the unit def here if we encountered no classes
+      if (_needCloseUnitDef) writer.closeDef();
+
+    } finally {
+      _id = Ref.Global.ROOT;
+      _unit = null;
     }
-    String pname = unit.packge.toString();
-    _id = _id.plus(pname);
-    int offset = _text.indexOf(pname, unit.pos);
-    writer.openDef(_id, pname, Kind.MODULE, Flavor.PACKAGE, true, Access.PUBLIC,
-                   offset, 0, _text.length()); // TODO: this bodystart/end is kind of bogus
-    String pkgpre = "package ";
-    writer.emitSig(pkgpre + pname);
-    writer.emitSigDef(_id, pname, Kind.MODULE, pkgpre.length());
-    super.visitCompilationUnit(node, writer);
-    writer.closeDef();
-    _id = _id.parent;
-    _unit.pop();
     return null;
   }
 
   @Override public Void visitClass (ClassTree node, Writer writer) {
+    // if we haven't yet closed the synthetic unit def, then it's time to do so
+    if (_needCloseUnitDef) {
+      writer.closeDef();
+      _needCloseUnitDef = false;
+      _id = _id.parent;
+    }
+
     _symtab.push(new HashMap<>());
     JCClassDecl tree = (JCClassDecl)node;
     _class.push(tree);
@@ -96,7 +135,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // we allow the name to be "" for anonymous classes so that they can be properly filtered
     // in the user interface; we eventually probably want to be more explicit about this
     writer.openDef(_id, name, Kind.TYPE, flavor, isExp(tree.mods.flags), toAccess(tree.mods.flags),
-                   start, treeStart, tree.getEndPosition(_unit.peek().endPositions));
+                   start, treeStart, tree.getEndPosition(_unit.endPositions));
 
     // emit supertype relations
     Type t = tree.type;
@@ -164,7 +203,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       int offset = _text.indexOf(name, treeStart);
       writer.openDef(_id, name, Kind.FUNC, flavor, isExp,
                      isIface ? Access.PUBLIC : toAccess(tree.mods.flags),
-                     offset, treeStart, tree.getEndPosition(_unit.peek().endPositions));
+                     offset, treeStart, tree.getEndPosition(_unit.endPositions));
 
       if (tree.sym != null) emitSuperMethod(tree.sym, writer);
 
@@ -235,7 +274,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     String name = tree.name.toString();
     _id = _id.plus(name);
 
-    int varend = tree.vartype.getEndPosition(_unit.peek().endPositions);
+    int varend = tree.vartype.getEndPosition(_unit.endPositions);
     int start = _text.indexOf(name, varend);
     int treeStart = tree.getStartPosition();
     int bodyStart = (treeStart == -1) ? start : treeStart;
@@ -245,7 +284,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
     writer.openDef(_id, name, Kind.VALUE, flavor, isExp,
                    isField ? toAccess(tree.mods.flags) : Access.LOCAL,
-                   start, bodyStart, tree.getEndPosition(_unit.peek().endPositions));
+                   start, bodyStart, tree.getEndPosition(_unit.endPositions));
 
     // emit our signature
     new SigPrinter(_id, _class.peek().name).emit(tree, writer);
@@ -322,7 +361,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       int offset = _text.indexOf(name, selpos);
       // TODO: I think this is still happening in some circumstances...
       if (offset == -1) {
-        System.err.printf("Unable to find use in member select %s (%s @ %d / %d %s)\n",
+        System.out.printf("Unable to find use in member select %s (%s @ %d / %d %s)\n",
                           tree, name, selpos, tree.getStartPosition(), tree.selected.toString());
       }
       else writer.emitUse(targetForSym(name, tree.sym), name, kindForSym(tree.sym), offset);
@@ -532,7 +571,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
         }
       }
     } catch (Exception e) {
-      System.err.println("Error finding doc at " + pos + " in " + _unit.peek().sourcefile + ":");
+      System.err.println("Error finding doc at " + pos + " in " + _unit.sourcefile + ":");
       e.printStackTrace(System.err);
       return NO_DOC;
     }
@@ -580,7 +619,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   public int nextanon () { _anoncount += 1; return _anoncount; }
   private int _anoncount = 0;
 
-  private Deque<JCCompilationUnit> _unit = new ArrayDeque<>();
+  private JCCompilationUnit _unit;
+  private boolean _needCloseUnitDef;
   private Deque<JCClassDecl> _class = new ArrayDeque<>();
   private Deque<JCMethodDecl> _meth = new ArrayDeque<>();
   private Deque<DefDoc> _doc = new ArrayDeque<>();
