@@ -54,41 +54,41 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
         return null;
       }
 
-      // determine whether this is a package-info.java file
-      String fpath = unit.getSourceFile().toUri().toString();
-      String fname = fpath.substring(fpath.lastIndexOf('/')+1);
-      boolean isPackageInfo = fname.equals("package-info.java");
-
       // the top-level id for a comp unit is always the package
       String pname = unit.packge.toString();
       _id = _id.plus(pname);
       String pkgpre = "package ";
-      String pkgsig; // defined below
 
-      // if this is a package-info.java file, then it "defines" the package
-      if (isPackageInfo) pkgsig = pkgpre + pname;
-      // otherwise the package statement just represents a use of the package name
-      else {
-        // insert a synthetic def to capture all of the uses that occur before the first real def in
-        // the file (imports); we'll close this synthetic def when we see the first class; we can't
-        // allow this synthetic def to enclose the class defs as that would give them an incorrect
-        // fully qualified name
-        _id = _id.plus(fname);
-        pkgsig = pkgpre + pname + " (" + fname + ")";
-      }
-
-      _needCloseUnitDef = true;
+      // open a def for the package; this is kind of a wonky def because it is redefined by every
+      // compilation unit in this package, but we want the top-level classes in this comp unit to be
+      // enclosed by the package def, so somebody has to emit it
       writer.openDef(_id, pname, Kind.MODULE, Flavor.PACKAGE, true, Access.PUBLIC,
                      // TODO: this bodystart/end is kind of bogus
                      _text.indexOf(pname, unit.pos), 0, _text.length());
       writer.emitSig(pkgpre + pname);
       writer.emitSigDef(_id, pname, Kind.MODULE, pkgpre.length());
-      super.visitCompilationUnit(node, writer);
 
-      // alas hackery: the unit def is usually a "fake" def which just captures the imports in this
-      // compilation unit; it will already have been closed the first time we saw a class def, so we
-      // only close the unit def here if we encountered no classes
+      // now we need a special hacky def to "owned" the imports in this compilation unit; we can't
+      // allow those to be owned by the package module def, because that gets redefined by every
+      // compilation unit and only one unit would get its import uses into the database which breaks
+      // things like find-all-uses
+
+      // determine the (simple) name of this compilation unit
+      String fpath = unit.getSourceFile().toUri().toString();
+      String fname = fpath.substring(fpath.lastIndexOf('/')+1);
+      _id = _id.plus(fname);
+      writer.openDef(_id, pname, Kind.SYNTHETIC, Flavor.NONE, false, Access.LOCAL,
+                     _text.indexOf(pname, unit.pos), 0, _text.length());
+      writer.emitSig(pkgpre + pname + " (" + fname + ")");
+      writer.emitSigUse(_id, pname, Kind.MODULE, pkgpre.length());
+
+      _needCloseUnitDef = true;
+      super.visitCompilationUnit(node, writer);
+      // if we haven't closed our comp unit def, we need to do so now
       if (_needCloseUnitDef) writer.closeDef();
+
+      // now close our package def
+      writer.closeDef();
 
     } finally {
       _id = Ref.Global.ROOT;
