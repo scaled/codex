@@ -22,5 +22,9 @@ public enum Kind {
 
   /** A named value. Examples: a Java/C#/C++ class field, a C struct member, a function parameter,
    * a local variable. */
-  VALUE;
+  VALUE,
+
+  /** A special def used to cope with the fact that languages and source code don't precisely
+    * line up with our "code is a nested tree of defs" model. */
+  SYNTHETIC;
 }
