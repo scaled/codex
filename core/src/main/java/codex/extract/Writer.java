@@ -14,12 +14,12 @@ import codex.model.*;
  * [openSession
  *   [openUnit
  *     [openDef
- *       emitRelation*
  *       emitSig?
  *         emitSigDef*
  *         emitSigUse*
  *       emitDoc?
  *         emitDocUse*
+ *       emitRelation*
  *       emitUse*
  *       [openDef..closeDef]*
  *     closeDef]*
@@ -40,8 +40,6 @@ public abstract class Writer {
                                 boolean exported, Access access,
                                 int offset, int bodyStart, int bodyEnd);
 
-  public abstract void emitRelation (Relation relation, Ref.Global target);
-
   public abstract void emitSig (String text);
   public abstract void emitSigDef (Ref.Global id, String name, Kind kind, int offset);
   public abstract void emitSigUse (Ref.Global target, String name, Kind kind, int offset);
@@ -49,6 +47,7 @@ public abstract class Writer {
   public abstract void emitDoc (int offset, int length);
   public abstract void emitDocUse (Ref.Global target, String name, Kind kind, int offset);
 
+  public abstract void emitRelation (Relation relation, Ref.Global target);
   public abstract void emitUse (Ref.Global target, String name, Kind kind, int offset);
 
   public abstract void closeDef ();
