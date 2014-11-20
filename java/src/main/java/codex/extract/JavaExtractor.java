@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticListener;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.StandardJavaFileManager;
@@ -101,7 +103,13 @@ public class JavaExtractor implements Extractor {
         opts.add(cp);
       }
 
-      JavacTaskImpl task = (JavacTaskImpl)_compiler.getTask(null, null, null, opts, null, files);
+      int[] diags = new int[Diagnostic.Kind.values().length];
+      DiagnosticListener<JavaFileObject> diag = new DiagnosticListener<JavaFileObject>() {
+        public void report(Diagnostic<? extends JavaFileObject> diagnostic) {
+          diags[diagnostic.getKind().ordinal()]++;
+        }
+      };
+      JavacTaskImpl task = (JavacTaskImpl)_compiler.getTask(null, null, diag, opts, null, files);
       Iterable<? extends CompilationUnitTree> asts = task.parse();
       task.analyze(); // don't need results, but need annotations in tree
 
@@ -122,6 +130,16 @@ public class JavaExtractor implements Extractor {
                                          m -> m.getName().equals("cleanup"));
       endContext.setAccessible(true);
       endContext.invoke(task);
+
+      // report the number of diagnostics
+      StringBuilder sb = new StringBuilder();
+      for (Diagnostic.Kind kind : Diagnostic.Kind.values()) {
+        int count = diags[kind.ordinal()];
+        if (count == 0) continue;
+        if (sb.length() > 0) sb.append(", ");
+        sb.append(kind.toString().toLowerCase()).append('=').append(count);
+      }
+      if (sb.length() > 0) System.err.println("Diagnostics [" + sb + "]");
 
     } catch (Exception e) {
       throw new RuntimeException(e);
