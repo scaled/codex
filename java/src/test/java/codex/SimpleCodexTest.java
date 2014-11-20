@@ -69,6 +69,7 @@ public class SimpleCodexTest {
 
   /*@Test*/ public void testFileCodexPerf () throws IOException {
     MapDBStore store = new MapDBStore("test-codex", Paths.get("test-codex"));
+    // MapDBStore store = new MapDBStore("test-codex");
     JavaExtractor extract = new JavaExtractor();
     if (false) {
       String zip = System.getProperty("user.home") +
@@ -81,6 +82,14 @@ public class SimpleCodexTest {
     System.out.println(store.defCount() + " defs.");
     System.out.println(store.nameCount() + " (exported) names.");
     store.close();
+
+    // clean up after our mapdbstore
+    if (Files.exists(Paths.get("test-codex"))) {
+      Files.delete(Paths.get("test-codex"));
+      Files.delete(Paths.get("test-codex.p"));
+      Files.delete(Paths.get("test-codex.t"));
+      Files.delete(Paths.get("test-codex.v"));
+    }
   }
 
   // @Test public void testDump () {
