@@ -5,6 +5,7 @@
 package codex.extract;
 
 import codex.model.*;
+import codex.store.IdSet;
 import codex.store.ProjectStore;
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
@@ -137,7 +138,7 @@ public abstract class BatchWriter extends Writer {
     public List<UseInfo> uses;
 
     public Long defId; // this gets assigned in toDef()
-    public Set<Long> memDefIds;
+    public IdSet.Builder memDefIds;
 
     public DefInfo (DefInfo outer, Ref.Global id, String name, Kind kind, Flavor flavor,
                     boolean exported, Access access, int offset, int bodyStart, int bodyEnd) {
@@ -179,7 +180,7 @@ public abstract class BatchWriter extends Writer {
     }
 
     private void noteMemDef (Long defId) {
-      if (memDefIds == null) memDefIds = new HashSet<>();
+      if (memDefIds == null) memDefIds = new IdSet.Builder();
       memDefIds.add(defId);
     }
   }

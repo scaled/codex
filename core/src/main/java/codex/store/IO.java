@@ -13,6 +13,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -42,20 +43,19 @@ public class IO {
   }
   public static final Serializer<SourceInfo> SRCINFO_SZ = new SourceInfoSerializer();
 
-  public static class IdsSerializer implements Serializer<Set<Long>>, Serializable {
+  public static class IdsSerializer implements Serializer<IdSet>, Serializable {
     @Override public int fixedSize() { return -1; }
-    @Override public void serialize (DataOutput out, Set<Long> ids) throws IOException {
+    @Override public void serialize (DataOutput out, IdSet ids) throws IOException {
       out.writeInt(ids.size());
-      for (Long id : ids) out.writeLong(id);
+      for (long id : ids.elems) out.writeLong(id);
     }
-    @Override public Set<Long> deserialize (DataInput in, int available) throws IOException {
-      int count = in.readInt();
-      Set<Long> ids = new HashSet<>(count);
-      for (int ii = 0; ii < count; ii++) ids.add(in.readLong());
-      return ids;
+    @Override public IdSet deserialize (DataInput in, int available) throws IOException {
+      long[] elems = new long[in.readInt()];
+      for (int ii = 0; ii < elems.length; ii++) elems[ii] = in.readLong();
+      return IdSet.of(elems);
     }
   };
-  public static final Serializer<Set<Long>> IDS_SZ = new IdsSerializer();
+  public static final Serializer<IdSet> IDS_SZ = new IdsSerializer();
 
   public static ProjectStore store;
 

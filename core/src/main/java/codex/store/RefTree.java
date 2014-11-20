@@ -6,7 +6,6 @@ package codex.store;
 
 import codex.model.Ref;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 /**
  * Maintains a mapping from {@link Ref.Global} to an integer identifier.
@@ -32,7 +31,7 @@ public abstract class RefTree {
   public abstract Long resolve (Ref.Global ref, Long assignId);
 
   /** Removes mappings for all refs with ids in {@code ids}. */
-  public abstract void remove (Set<Long> ids);
+  public abstract void remove (Iterable<Long> ids);
 
   /** Completely clears the contents of this tree. */
   public abstract void clear ();

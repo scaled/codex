@@ -5,6 +5,7 @@
 package codex.store;
 
 import codex.model.Ref;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -47,12 +48,13 @@ public class EphemeralRefTree extends RefTree {
     return resolveNode(ref).resolveId(assignId);
   }
 
-  @Override public synchronized void remove (Set<Long> ids) {
+  @Override public synchronized void remove (Iterable<Long> ids) {
+    Set<Long> keySet = _byId.keySet();
     for (Long id : ids) {
       Node node = _byId.get(id);
       if (node != null) node.id = null;
+      keySet.remove(id);
     }
-    _byId.keySet().removeAll(ids);
     // we leave the nodes in the tree for now; if this turns out to be a big memory issue, we can go
     // through the extra effort to purge removed tree nodes which have no children
   }

@@ -54,11 +54,35 @@ public class MapDBStore extends ProjectStore {
     private int _writeCount;
     private static final int COMMIT_EVERY = 100;
 
+    private Map<Long,IdSet.Builder> _localRefs = new HashMap<>();
+    private Map<Ref.Global,IdSet.Builder> _globalRefs = new HashMap<>();
+
     @Override public void openSession () {
       _writeCount = 0;
     }
 
     @Override public void closeSession () {
+      // store our use indices
+      for (Map.Entry<Long,IdSet.Builder> ent : _localRefs.entrySet()) {
+        Long refId = ent.getKey();
+        IdSet units = _locUseSrcs.getOrDefault(refId, IdSet.EMPTY);
+        IdSet.Builder nunitsB = ent.getValue();
+        nunitsB.add(units);
+        IdSet nunits = nunitsB.build();
+        if (!units.equals(nunits)) _locUseSrcs.put(refId, nunits);
+      }
+      _localRefs.clear();
+      for (Map.Entry<Ref.Global,IdSet.Builder> ent : _globalRefs.entrySet()) {
+        String refId = ent.getKey().toString();
+        IdSet units = _gloUseSrcs.getOrDefault(refId, IdSet.EMPTY);
+        IdSet.Builder nunitsB = ent.getValue();
+        nunitsB.add(units);
+        IdSet nunits = nunitsB.build();
+        if (!units.equals(nunits)) _gloUseSrcs.put(refId, nunits);
+      }
+      _globalRefs.clear();
+
+      // and finally commit all remaining writes
       _db.commit();
     }
 
@@ -70,8 +94,8 @@ public class MapDBStore extends ProjectStore {
       Long unitId = _srcToId.computeIfAbsent(srcKey, unused -> _srcToId.size()+1L);
 
       // load the ids of existing defs in this source
-      Set<Long> oldSourceIds = _srcDefs.getOrDefault(unitId, new HashSet<>());
-      Set<Long> newSourceIds = new HashSet<>();
+      IdSet oldSourceIds = _srcDefs.getOrDefault(unitId, IdSet.EMPTY);
+      IdSet.Builder newSourceIdsB = new IdSet.Builder();
 
       // track all refs to defs defined outside this compunit
       Set<Long> localRefs = new HashSet<>();
@@ -84,7 +108,7 @@ public class MapDBStore extends ProjectStore {
         Long nextExpId = nextUnusedExpId(toDefId(unitId, 0)), nextNonExpId = maxExpId+1;
 
         Long nextUnusedExpId (Long after) {
-          Long id = after + 1;
+          long id = after + 1;
           while (oldSourceIds.contains(id)) id += 1;
           if (id > maxExpId) throw new IllegalStateException(
             "Ack! Can't support more than "+ MAX_EXP_ID +" exported defs per source file.");
@@ -114,7 +138,7 @@ public class MapDBStore extends ProjectStore {
           Long defId = inf.exported ? resolveProjectId(inf.id) : resolveSourceId(inf.id);
           Def def = inf.toDef(MapDBStore.this, defId, inf.outer.defId);
           _defs.put(def.id, def);
-          newSourceIds.add(def.id);
+          newSourceIdsB.add(def.id);
           if (def.outerId == null) _topDefs.add(def.id);
           _indices.get(def.kind).add(Fun.t2(def.name.toLowerCase(), def.id));
         }
@@ -125,19 +149,16 @@ public class MapDBStore extends ProjectStore {
             storeDefs(def.defs); // this will populate def.memDefIds with our member def ids
 
             // now update our member def ids mapping
-            Set<Long> memDefIds;
-            if (!defSpansSources(def)) memDefIds = def.memDefIds;
+            IdSet.Builder memDefIdsB = def.memDefIds;
             // if this def spans source files, do more complex member def merging
-            else {
-              memDefIds = new HashSet<Long>();
-              Set<Long> oldMemDefIds = _defMems.get(def.defId);
-              if (oldMemDefIds != null) {
-                memDefIds.addAll(oldMemDefIds);
-                memDefIds.removeAll(oldSourceIds);
+            if (defSpansSources(def)) {
+              IdSet oldMemDefIds = _defMems.getOrDefault(def.defId, IdSet.EMPTY);
+              for (long id : oldMemDefIds.elems) {
+                if (!oldSourceIds.contains(id)) memDefIdsB.add(id);
               }
-              if (def.memDefIds != null) memDefIds.addAll(def.memDefIds);
             }
-            if (memDefIds == null || memDefIds.isEmpty()) _defMems.remove(def.defId);
+            IdSet memDefIds = (memDefIdsB == null) ? IdSet.EMPTY : memDefIdsB.build();
+            if (memDefIds.isEmpty()) _defMems.remove(def.defId);
             else _defMems.put(def.defId, memDefIds);
           }
         }
@@ -210,21 +231,17 @@ public class MapDBStore extends ProjectStore {
         }
       }.run();
 
-      // update the indices for refs made in this compunit
+      // accumulate to the indices for refs made in this compunit
       for (Long refId : localRefs) {
-        Set<Long> units = _locUseSrcs.get(refId);
-        if (units == null) units = new HashSet<>();
-        if (units.add(unitId)) _locUseSrcs.put(refId, units);
+        _localRefs.computeIfAbsent(refId, rf -> IdSet.builder()).add(unitId);
       }
       for (Ref.Global ref : globalRefs) {
-        String refKey = ref.toString();
-        Set<Long> units = _gloUseSrcs.get(refKey);
-        if (units == null) units = new HashSet<>();
-        if (units.add(unitId)) _gloUseSrcs.put(refKey, units);
+        _globalRefs.computeIfAbsent(ref, rf -> IdSet.builder()).add(unitId);
       }
 
       // filter the reused source ids from the old source ids and delete any that remain
-      Set<Long> staleIds = Sets.difference(oldSourceIds, newSourceIds).immutableCopy();
+      IdSet newSourceIds = newSourceIdsB.build();
+      IdSet staleIds = oldSourceIds.minus(newSourceIds);
       if (!staleIds.isEmpty()) removeDefs(staleIds);
       _srcDefs.put(unitId, newSourceIds);
       _srcInfo.put(unitId, new IO.SourceInfo(srcKey, indexed));
@@ -315,8 +332,7 @@ public class MapDBStore extends ProjectStore {
   }
 
   @Override public Iterable<Def> defsIn (Long defId) {
-    Set<Long> ids = _defMems.get(defId);
-    return (ids == null) ? Collections.emptyList() : Iterables.transform(ids, this::def);
+    return Iterables.transform(_defMems.getOrDefault(defId, IdSet.EMPTY), this::def);
   }
 
   @Override public List<Use> usesIn (Long defId) {
@@ -327,15 +343,12 @@ public class MapDBStore extends ProjectStore {
   @Override public Map<Source,int[]> usesOf (Def def) {
     // determine whether we're looking for local or global refs
     Ref ref;
-    Set<Long> unitIds;
+    IdSet unitIds;
     if (def.project == this) {
       ref = def.ref();
       // since this def is local to this project, the comp unit that defines it is "implicit" in its
       // unit ids set; so start with that, and then add any other unit ids that reference it
-      unitIds = new HashSet<>();
-      unitIds.add(toUnitId(def.id));
-      Set<Long> otherUnitIds = _locUseSrcs.get(def.id);
-      if (otherUnitIds != null) unitIds.addAll(otherUnitIds);
+      unitIds = _locUseSrcs.getOrDefault(def.id, IdSet.EMPTY).plus(toUnitId(def.id));
     } else {
       ref = def.globalRef();
       unitIds = _gloUseSrcs.get(ref.toString());
@@ -403,7 +416,7 @@ public class MapDBStore extends ProjectStore {
     }
   }
 
-  private void removeDefs (Set<Long> defIds) {
+  private void removeDefs (IdSet defIds) {
     // TODO: only remove exported defs from projectRefs
     _projectRefs.remove(defIds);
     _topDefs.removeAll(defIds);
@@ -515,7 +528,7 @@ public class MapDBStore extends ProjectStore {
           }
           return id;
         }
-        public void remove (Set<Long> ids) {
+        public void remove (Iterable<Long> ids) {
           for (Long id : ids) {
             String ref = _refsById.remove(id);
             if (ref != null) _refsByName.remove(ref);
@@ -542,16 +555,16 @@ public class MapDBStore extends ProjectStore {
 
   private final BTreeMap<String,Long> _srcToId;
   private final BTreeMap<Long,IO.SourceInfo> _srcInfo;
-  private final BTreeMap<Long,Set<Long>> _srcDefs;
+  private final BTreeMap<Long,IdSet> _srcDefs;
   private final Set<Long> _topDefs;
   private final BTreeMap<Long,Def> _defs;
   private final BTreeMap<Long,Sig> _defSig;
   private final BTreeMap<Long,Doc> _defDoc;
-  private final BTreeMap<Long,Set<Long>> _defMems;
+  private final BTreeMap<Long,IdSet> _defMems;
   private final BTreeMap<Long,List<Use>> _defUses;
   private final Map<Kind,NavigableSet<Fun.Tuple2<String,Long>>> _indices;
-  private final BTreeMap<Long,Set<Long>> _locUseSrcs;
-  private final BTreeMap<String,Set<Long>> _gloUseSrcs;
+  private final BTreeMap<Long,IdSet> _locUseSrcs;
+  private final BTreeMap<String,IdSet> _gloUseSrcs;
 
   private final BTreeMap<String,Long> _refsByName;
   private final BTreeMap<Long,String> _refsById;
