@@ -1,2 +1,2 @@
-depend: mvn:com.google.guava:guava:16.0.1
+depend: mvn:com.google.guava:guava:18.0
 depend: mvn:org.mapdb:mapdb:1.0.6
