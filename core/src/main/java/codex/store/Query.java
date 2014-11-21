@@ -79,6 +79,10 @@ public class Query {
     return matches;
   }
 
+  @Override public String toString () {
+    return "Query(" + name + ", pre=" + prefix + ", loc=" + locality + ", kinds=" + kinds + ")";
+  }
+
   private Query (Set<Kind> kinds, String name, boolean prefix, Locality locality) {
     this.kinds = kinds;
     this.name = name.toLowerCase();

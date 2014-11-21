@@ -43,7 +43,7 @@ public class IO {
   }
   public static final Serializer<SourceInfo> SRCINFO_SZ = new SourceInfoSerializer();
 
-  public static class IdsSerializer implements Serializer<IdSet>, Serializable {
+  public static class IdSetSerializer implements Serializer<IdSet>, Serializable {
     @Override public int fixedSize() { return -1; }
     @Override public void serialize (DataOutput out, IdSet ids) throws IOException {
       out.writeInt(ids.size());
@@ -55,7 +55,7 @@ public class IO {
       return IdSet.of(elems);
     }
   };
-  public static final Serializer<IdSet> IDS_SZ = new IdsSerializer();
+  public static final Serializer<IdSet> IDS_SZ = new IdSetSerializer();
 
   public static ProjectStore store;
 
@@ -114,6 +114,20 @@ public class IO {
       return readUses(in, store);
     }
   };
+
+  public static class RefSetSerializer extends StoreSerializer implements Serializer<Set<Ref>> {
+    @Override public int fixedSize() { return -1; }
+    @Override public void serialize (DataOutput out, Set<Ref> refs) throws IOException {
+      out.writeInt(refs.size());
+      for (Ref ref : refs) writeRef(out, ref);
+    }
+    @Override public Set<Ref> deserialize (DataInput in, int available) throws IOException {
+      int count = in.readInt();
+      Set<Ref> refs = new HashSet<Ref>(count);
+      for (int ii = 0; ii < count; ii++) refs.add(readRef(in, store));
+      return refs;
+    }
+  }
 
   public static Def readDef (DataInput in, ProjectStore store) throws IOException {
     return new Def(store, in.readLong() /*id*/, zero2null(in.readLong()) /*outerId*/,

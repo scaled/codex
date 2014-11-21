@@ -77,6 +77,12 @@ public abstract class ProjectStore implements AutoCloseable {
    */
   public abstract List<Use> usesIn (Long defId);
 
+  /** Returns all references for which a relation exists {@code (rel, defId, ref)}. */
+  public abstract Set<Ref> relationsFrom (Relation rel, Long defId);
+
+  /** Returns all def ids for which a relation exists {@code (rel, defId, ref)}. */
+  public abstract Set<Long> relationsTo (Relation rel, Ref ref);
+
   /**
    * Returns all uses of {@code def} which appear in any compilation units in this project. The def
    * need not originate from this project. The returned uses are returned as a mapping from source
@@ -124,6 +130,10 @@ public abstract class ProjectStore implements AutoCloseable {
       for (Use use : usesIn(def.id)) cons.accept(use);
     }
     return true;
+  }
+
+  @Override public String toString () {
+    return getClass().getSimpleName() + "(" + name + ")";
   }
 
   protected ProjectStore (String name) {

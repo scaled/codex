@@ -202,6 +202,8 @@ public class MapDBStore extends ProjectStore {
               } else globalRefs.add((Ref.Global)ref);
             }
           }
+
+          // TODO: store inf.relations
         }
 
         List<Use> resolveUses (List<UseInfo> infos) {
@@ -340,6 +342,14 @@ public class MapDBStore extends ProjectStore {
     return (uses == null) ? Collections.emptyList() : uses;
   }
 
+  @Override public Set<Ref> relationsFrom (Relation rel, Long defId) {
+    return _defRelsFrom.get(rel).get(defId);
+  }
+
+  @Override public Set<Long> relationsTo (Relation rel, Ref ref) {
+    return new HashSet<>(_defRelsTo.get(rel).get(ref.toString()));
+  }
+
   @Override public Map<Source,int[]> usesOf (Def def) {
     // determine whether we're looking for local or global refs
     Ref ref;
@@ -403,6 +413,7 @@ public class MapDBStore extends ProjectStore {
   @Override public void find (Query query, boolean expOnly, List<Def> into) {
     boolean pre = query.prefix;
     String name = query.name;
+    System.err.println("Seeking " + query + " in " + this);
     Fun.Tuple2<String,Long> lowKey = Fun.t2(name, null);
     for (Kind kind : query.kinds) {
       NavigableSet<Fun.Tuple2<String,Long>> index = _indices.get(kind);
@@ -411,7 +422,10 @@ public class MapDBStore extends ProjectStore {
         Def def = _defs.get(ent.b);
         if (def == null) continue; // index can contain stale entries
         // TODO: validate that def matches query (index may have stale link to reused def id)
-        if (!expOnly || def.exported) into.add(def);
+        if (!expOnly || def.exported) {
+          System.err.println("Found " + ent + " / " + def + " in " + this);
+          into.add(def);
+        }
       }
     }
   }
@@ -498,6 +512,14 @@ public class MapDBStore extends ProjectStore {
       _defMems = createTreeMap("defMems", longSz, IO.IDS_SZ);
       _defUses = createTreeMap("defUses", longSz, new IO.UsesSerializer());
 
+      _defRelsFrom = new HashMap<>();
+      _defRelsTo = new HashMap<>();
+      IO.RefSetSerializer refSz = new IO.RefSetSerializer();
+      for (Relation rel : Relation.values()) {
+        _defRelsFrom.put(rel, createTreeMap("defRelsFrom" + rel, longSz, refSz));
+        _defRelsTo.put(rel, createTreeMap("defRelsTo" + rel, stringSz, IO.IDS_SZ));
+      }
+
       _locUseSrcs = createTreeMap("locUseSrcs", longSz, IO.IDS_SZ);
       _gloUseSrcs = createTreeMap("gloUseSrcs", stringSz, IO.IDS_SZ);
 
@@ -562,6 +584,8 @@ public class MapDBStore extends ProjectStore {
   private final BTreeMap<Long,Doc> _defDoc;
   private final BTreeMap<Long,IdSet> _defMems;
   private final BTreeMap<Long,List<Use>> _defUses;
+  private final Map<Relation,BTreeMap<Long,Set<Ref>>> _defRelsFrom;
+  private final Map<Relation,BTreeMap<String,IdSet>> _defRelsTo;
   private final Map<Kind,NavigableSet<Fun.Tuple2<String,Long>>> _indices;
   private final BTreeMap<Long,IdSet> _locUseSrcs;
   private final BTreeMap<String,IdSet> _gloUseSrcs;

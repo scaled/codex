@@ -31,10 +31,6 @@ public abstract class BatchWriter extends Writer {
                                          offset, bodyStart, bodyEnd));
   }
 
-  @Override public void emitRelation (Relation relation, Ref.Global target) {
-    // TODO
-  }
-
   @Override public void emitSig (String text) {
     _curDef.sig = new SigInfo(text);
   }
@@ -55,6 +51,10 @@ public abstract class BatchWriter extends Writer {
 
   @Override public void emitUse (Ref.Global target, String name, Kind kind, int offset) {
     _curDef.addUse(new UseInfo(target, kind, offset, name.length()));
+  }
+
+  @Override public void emitRelation (Relation relation, Ref.Global target) {
+    _curDef.addRelation(relation, target);
   }
 
   @Override public void closeDef () {
@@ -120,6 +120,16 @@ public abstract class BatchWriter extends Writer {
     }
   }
 
+  protected static class RelInfo {
+    public final Relation relation;
+    public final Ref.Global target;
+
+    public RelInfo (Relation relation, Ref.Global target) {
+      this.relation = relation;
+      this.target = target;
+    }
+  }
+
   protected static class DefInfo {
     public final DefInfo outer;
     public final Ref.Global id;
@@ -136,6 +146,7 @@ public abstract class BatchWriter extends Writer {
     public DocInfo doc;
     public List<DefInfo> defs;
     public List<UseInfo> uses;
+    public List<RelInfo> relations;
 
     public Long defId; // this gets assigned in toDef()
     public IdSet.Builder memDefIds;
@@ -164,6 +175,11 @@ public abstract class BatchWriter extends Writer {
     public void addUse (UseInfo use) {
       if (uses == null) uses = new ArrayList<>();
       uses.add(use);
+    }
+
+    public void addRelation (Relation relation, Ref.Global target) {
+      if (relations == null) relations = new ArrayList<>();
+      relations.add(new RelInfo(relation, target));
     }
 
     public Def toDef (ProjectStore store, Long defId, Long outerId) {
