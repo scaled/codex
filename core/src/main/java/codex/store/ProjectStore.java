@@ -19,98 +19,73 @@ import java.util.function.Consumer;
  */
 public abstract class ProjectStore implements AutoCloseable {
 
-  /**
-   * The user friendly name of this project.
-   */
+  /** The user friendly name of this project. */
   public final String name;
 
-  /**
-   * Returns a writer that can be used to update this project.
-   */
+  /** Returns a writer that can be used to update this project. */
   public abstract Writer writer ();
 
-  /**
-   * Returns all top-level defs in this project.
-   */
+  /** Returns all top-level defs in this project. */
   public abstract Iterable<Def> topLevelDefs ();
 
-  /**
-   * Returns the timestamp at which {@code source} was last indexed by this project, 0L if it has
-   * never been indexed by this project.
-   */
+  /** Returns the timestamp at which {@code source} was last indexed by this project, 0L if it has
+    * never been indexed by this project. */
   public abstract long lastIndexed (Source source);
 
-  /**
-   * Returns all defs in the specified source file.
-   */
+  /** Returns all defs in the specified source file. */
   public abstract Iterable<Def> sourceDefs (Source source);
 
-  /**
-   * Returns the def referred to by {@code ref}, if it is part of this project.
-   */
+  /** Returns the def referred to by {@code ref}, if it is part of this project. */
   public abstract Optional<Def> def (Ref.Global ref);
 
-  /**
-   * Returns the def with id {@code defId}.
-   * @throws NoSuchElementException if no def exists with that id.
-   */
+  /** Returns the def with id {@code defId}.
+    * @throws NoSuchElementException if no def exists with that id. */
   public abstract Def def (Long defId);
 
-  /**
-   * Returns a global ref for {@code defId}.
-   * @throws NoSuchElementException if no def exists with that id.
-   */
+  /** Returns a global ref for {@code defId}.
+    * @throws NoSuchElementException if no def exists with that id. */
   public abstract Ref.Global ref (Long defId);
 
-  /**
-   * Returns all defs nested immediately inside {@code defId}. This does not return defs nested two
-   * or more levels deep.
-   * @throws NoSuchElementException if no def exists with that id.
-   */
-  public abstract Iterable<Def> defsIn (Long defId);
-
-  /**
-   * Returns all uses nested immediately inside {@code defId}. This does not return uses nested
-   * inside defs which are themselves nested in {@code defId}, only uses that occur directly in the
-   * body of {@code defId}.
-   * @throws NoSuchElementException if no def exists with that id.
-   */
-  public abstract List<Use> usesIn (Long defId);
-
-  /** Returns all references for which a relation exists {@code (rel, defId, ref)}. */
-  public abstract Set<Ref> relationsFrom (Relation rel, Long defId);
-
-  /** Returns all def ids for which a relation exists {@code (rel, defId, ref)}. */
-  public abstract Set<Long> relationsTo (Relation rel, Ref ref);
-
-  /**
-   * Returns all uses of {@code def} which appear in any compilation units in this project. The def
-   * need not originate from this project. The returned uses are returned as a mapping from source
-   * file to the character offsets in said source file at which each use occurs.
-   */
-  public abstract Map<Source,int[]> usesOf (Def def);
-
-  /** Returns the signature for {@code defId}. */
+  /** Returns the signature for {@code defId}.
+    * @throws NoSuchElementException if no def exists with that id. */
   public abstract Optional<Sig> sig (Long defId);
 
-  /** Returns the documentation for {@code defId}. */
+  /** Returns the documentation for {@code defId}.
+    * @throws NoSuchElementException if no def exists with that id. */
   public abstract Optional<Doc> doc (Long defId);
 
-  /**
-   * Returns the source from which {@code defId} originates.
-   */
+  /** Returns the source from which {@code defId} originates.
+    * @throws NoSuchElementException if no def exists with that id. */
   public abstract Source source (Long defId);
 
-  /**
-   * Adds all defs to {@code into} that match {@code query}.
-   * @param expdOnly if true, include only exported defs in the results; if false, include exported
-   * and non-exported defs.
-   */
+  /** Returns all defs nested immediately inside {@code defId}. This does not return defs nested two
+    * or more levels deep.
+    * @throws NoSuchElementException if no def exists with that id. */
+  public abstract Iterable<Def> defsIn (Long defId);
+
+  /** Returns all uses nested immediately inside {@code defId}. This does not return uses nested
+    * inside defs which are themselves nested in {@code defId}, only uses that occur directly in the
+    * body of {@code defId}.
+    * @throws NoSuchElementException if no def exists with that id. */
+  public abstract Iterable<Use> usesIn (Long defId);
+
+  /** Returns all references for which a relation exists {@code (rel, def, ref)}. */
+  public abstract Set<Ref> relationsFrom (Relation rel, Long defId);
+
+  /** Returns all defs for which a relation exists {@code (rel, def, ref)}. */
+  public abstract Set<Def> relationsTo (Relation rel, Ref ref);
+
+  /** Returns all uses of {@code def} which appear in any compilation units in this project. The def
+    * need not originate from this project. The returned uses are returned as a mapping from source
+    * file to the character offsets in said source file at which each use occurs. */
+  public abstract Map<Source,int[]> usesOf (Def def);
+
+  /** Adds all defs to {@code into} that match {@code query}.
+    * @param expdOnly if true, include only exported defs in the results; if false, include exported
+    * and non-exported defs. */
   public abstract void find (Query query, boolean expOnly, List<Def> into);
 
-  /**
-   * Returns a debug representation of {@code id}.
-   */
+  /** Returns a debug representation of {@code id}. */
   public abstract String idToString (Long id);
 
   /**
