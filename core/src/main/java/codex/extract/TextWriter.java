@@ -47,12 +47,6 @@ public class TextWriter extends Writer {
   @Override public void emitSig (String text) {
     emit("sig", text.replace('\n', '\t')); // TODO: undo this on in TextReader
   }
-  @Override public void emitSigDef (Ref.Global id, String name, Kind kind, int offset) {
-    emit("sigdef", "id", id);
-    emit("sigdef", "name", name);
-    emit("sigdef", "kind", kind);
-    emit("sigdef", "offset", offset);
-  }
   @Override public void emitSigUse (Ref.Global target, String name, Kind kind, int offset) {
     emit("siguse", "target", target);
     emit("siguse", "name", name);

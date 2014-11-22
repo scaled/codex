@@ -34,10 +34,6 @@ public abstract class BatchWriter extends Writer {
   @Override public void emitSig (String text) {
     _curDef.sig = new SigInfo(text);
   }
-  @Override public void emitSigDef (Ref.Global id, String name, Kind kind, int offset) {
-    _curDef.sig.addDef(new DefInfo(null, id, name, kind, Flavor.NONE, false, Access.PUBLIC,
-                                   offset, 0, 0));
-  }
   @Override public void emitSigUse (Ref.Global target, String name, Kind kind, int offset) {
     _curDef.sig.addUse(new UseInfo(target, kind, offset, name.length()));
   }
@@ -71,15 +67,10 @@ public abstract class BatchWriter extends Writer {
 
   protected static class SigInfo {
     public final String text;
-    public List<DefInfo> defs;
     public List<UseInfo> uses;
 
     public SigInfo (String text) {
       this.text = text;
-    }
-    public void addDef (DefInfo def) {
-      if (defs == null) defs = new ArrayList<>();
-      defs.add(def);
     }
     public void addUse (UseInfo use) {
       if (uses == null) uses = new ArrayList<>();
