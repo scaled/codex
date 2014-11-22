@@ -156,7 +156,7 @@ public class Utils {
             printExprs(tree.implementing);
           }
         }
-        addSigDef(_id, _enclClassName.toString(), Kind.TYPE, cpos);
+        addSigUse(_id, _enclClassName.toString(), Kind.TYPE, cpos);
       } catch (IOException ioe) {
         ioe.printStackTrace(System.err);
       }
@@ -190,7 +190,7 @@ public class Utils {
             printExpr(tree.defaultValue);
           }
           _nested = false;
-          addSigDef(_id, mname, Kind.FUNC, mpos);
+          addSigUse(_id, mname, Kind.FUNC, mpos);
         }
       } catch (IOException ioe) {
         ioe.printStackTrace(System.err);
@@ -205,7 +205,7 @@ public class Utils {
       // if we're generating the signature for a class, we need to append the type param name to id
       // to get our id, otherwise id is our id as is
       String name = tree.name.toString();
-      addSigDef((_enclClassName != null) ? _id.plus(name) : _id, name, Kind.TYPE, tpos);
+      addSigUse((_enclClassName != null) ? _id.plus(name) : _id, name, Kind.TYPE, tpos);
     }
 
     @Override public void visitTypeIdent (JCPrimitiveTypeTree tree) {
@@ -250,7 +250,7 @@ public class Utils {
         // we're either printing the sig for a plain old vardef, or we're nested, in which case
         // we're printing the signature for a method, but it has parameters, and 'id' is the method
         // id, so we need to append the var name to get the var def id
-        addSigDef(_nested ? _id.plus(name) : _id, name, Kind.VALUE, vpos);
+        addSigUse(_nested ? _id.plus(name) : _id, name, Kind.VALUE, vpos);
       } catch (IOException ioe) {
         ioe.printStackTrace(System.err);
       }
@@ -262,10 +262,6 @@ public class Utils {
                   _buf.length());
       }
       super.visitIdent(tree);
-    }
-
-    private void addSigDef (Ref.Global id, String name, Kind kind, int offset) {
-      _writes = _writes.prepend(w -> w.emitSigDef(id, name, kind, offset));
     }
 
     private void addSigUse (Ref.Global target, String name, Kind kind, int offset) {

@@ -85,11 +85,10 @@ public class IO {
     @Override public int fixedSize() { return -1; }
     @Override public void serialize (DataOutput out, Sig sig) throws IOException {
       out.writeUTF(sig.text);
-      writeDefs(out, sig.defs);
       writeUses(out, sig.uses);
     }
     @Override public Sig deserialize (DataInput in, int available) throws IOException {
-      return new Sig(in.readUTF(), readDefs(in, store), readUses(in, store));
+      return new Sig(in.readUTF(), readUses(in, store));
     }
   }
 

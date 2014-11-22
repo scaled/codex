@@ -15,7 +15,6 @@ import codex.model.*;
  *   [openUnit
  *     [openDef
  *       emitSig?
- *         emitSigDef*
  *         emitSigUse*
  *       emitDoc?
  *         emitDocUse*
@@ -29,7 +28,7 @@ import codex.model.*;
  *
  * A * indicates that a method can be called zero or more times. A ? indicates that a method can be
  * called zero or one times. If a method is not called, the calls nested "inside" it must not be
- * called (i.e. emitSigDef without a preceding call to emitSig is invalid).
+ * called (i.e. emitSigUse without a preceding call to emitSig is invalid).
  */
 public abstract class Writer {
 
@@ -41,7 +40,6 @@ public abstract class Writer {
                                 int offset, int bodyStart, int bodyEnd);
 
   public abstract void emitSig (String text);
-  public abstract void emitSigDef (Ref.Global id, String name, Kind kind, int offset);
   public abstract void emitSigUse (Ref.Global target, String name, Kind kind, int offset);
 
   public abstract void emitDoc (int offset, int length);

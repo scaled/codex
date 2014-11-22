@@ -66,7 +66,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
                      // TODO: this bodystart/end is kind of bogus
                      _text.indexOf(pname, unit.pos), 0, _text.length());
       writer.emitSig(pkgpre + pname);
-      writer.emitSigDef(_id, pname, Kind.MODULE, pkgpre.length());
+      writer.emitSigUse(_id, pname, Kind.MODULE, pkgpre.length());
 
       // now we need a special hacky def to "owned" the imports in this compilation unit; we can't
       // allow those to be owned by the package module def, because that gets redefined by every

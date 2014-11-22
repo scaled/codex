@@ -14,17 +14,12 @@ public class Sig {
   /** The text of the signature. */
   public String text;
 
-  /** Any defs that occur in the signature. The offset of each def will be relative to the start of
-    * {@link #text}. */
-  public List<Def> defs;
-
   /** Any uses that occur in the signature. The offset of each use will be relative to the start of
     * {@link #text}. */
   public List<Use> uses;
 
-  public Sig (String text, List<Def> defs, List<Use> uses) {
+  public Sig (String text, List<Use> uses) {
     this.text = text;
-    this.defs = defs;
     this.uses = uses;
   }
 
