@@ -4,12 +4,14 @@
 
 package codex.model;
 
+import org.neo4j.graphdb.RelationshipType;
+
 /**
  * Defines optional relations between definitions. These are used to model aspects of languages that
  * do not fit into the "hierarchy of nested defs" base model. Relations may be one to one, one to
  * many, many to one, or many to many, depending on the source language.
  */
-public enum Relation {
+public enum Relation implements RelationshipType {
 
   /** Indicates that the target def is a supertype of the source def. */
   SUPERTYPE,

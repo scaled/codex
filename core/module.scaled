@@ -1,2 +1,3 @@
 depend: mvn:com.google.guava:guava:18.0
 depend: mvn:org.mapdb:mapdb:1.0.6
+depend: mvn:org.neo4j:neo4j:2.1.5
