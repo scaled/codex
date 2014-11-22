@@ -48,7 +48,6 @@ public class Neo4jStore extends ProjectStore {
 
   // define our relationship types
   private static enum Edge implements RelationshipType {
-    NAME_NAME, // links a name to its child name (1 to many)
     NAME_DEF,  // links a name to its def (1 to 1)
     UNIT_DEF,  // all the defs in a unit (1 to many)
     DEF_DEF,   // all the defs nested directly in an outer def (1 to many)
@@ -152,7 +151,7 @@ public class Neo4jStore extends ProjectStore {
     }
 
     private void storeDef (Node unitn, DefInfo inf) {
-      Node namen = resolveName(inf.id, inf.kind, true);
+      Node namen = resolveName(inf.id, inf.kind);
       Relationship drel = namen.getSingleRelationship(Edge.NAME_DEF, Direction.OUTGOING);
       Node defn;
       if (drel != null) defn = drel.getEndNode();
@@ -200,7 +199,7 @@ public class Neo4jStore extends ProjectStore {
       // TODO: delete old use links
       if (uses == null) return;
       for (UseInfo use : uses) {
-        Node namen = resolveName(use.ref, use.refKind, true);
+        Node namen = resolveName(use.ref, use.refKind);
         Relationship rel = srcn.createRelationshipTo(namen, edge);
         OFFSET.set(rel, use.offset);
         // TODO: set length if it differs from namen.name.length?
@@ -273,12 +272,13 @@ public class Neo4jStore extends ProjectStore {
       setConfig(GraphDatabaseSettings.keep_logical_logs, "10 txs").
       newGraphDatabase();
 
-    // if we have no root name, we need to create the database
+    // if we have no indices, we need to create the database
+    boolean haveIndices;
     try (Transaction tx = _db.beginTx()) {
-      _rootName = findNode(Entity.NAME, NAME.name, ROOT_NAME_NAME);
+      haveIndices = _db.schema().getIndexes().iterator().hasNext();
       tx.success();
     }
-    if (_rootName == null) createDB();
+    if (!haveIndices) createDB();
   }
 
   /**
@@ -377,7 +377,7 @@ public class Neo4jStore extends ProjectStore {
 
   @Override public Optional<Def> def (Ref.Global ref) {
     try (Transaction tx = _db.beginTx()) {
-      Optional<Def> result = Optional.ofNullable(resolveName(ref, null, false)).
+      Optional<Def> result = Optional.ofNullable(resolveName(ref, null)).
         map(n -> n.getSingleRelationship(Edge.NAME_DEF, Direction.OUTGOING)).
         map(r -> makeDef(r.getEndNode()));
       tx.success();
@@ -467,7 +467,7 @@ public class Neo4jStore extends ProjectStore {
   @Override public Set<Def> relationsTo (Relation rel, Ref ref) {
     try (Transaction tx = _db.beginTx()) {
       Node namen = (ref instanceof Ref.Local) ?
-        nameForDef(((Ref.Local)ref).defId) : resolveName((Ref.Global)ref, null, false);
+        nameForDef(((Ref.Local)ref).defId) : resolveName((Ref.Global)ref, null);
       Set<Def> result = (namen == null) ? Collections.emptySet() : Sets.newHashSet(
         Iterables.transform(namen.getRelationships(rel, Direction.INCOMING),
                             r -> makeDef(r.getStartNode())));
@@ -543,47 +543,26 @@ public class Neo4jStore extends ProjectStore {
     // create our indexes
     try (Transaction tx = _db.beginTx()) {
       Schema schema = _db.schema();
-      schema.indexFor(Entity.UNIT).on("source").create();
-      schema.indexFor(Entity.NAME).on("name").create();
+      schema.indexFor(Entity.UNIT).on(SOURCE.name).create();
+      schema.indexFor(Entity.NAME).on(NAME.name).create();
       // TODO: other indices?
       tx.success();
     }
-
-    // create our indexes
-    try (Transaction tx = _db.beginTx()) {
-      // create our root name node
-      _rootName = _db.createNode(Entity.NAME);
-      NAME.set(_rootName, ROOT_NAME_NAME);
-      tx.success();
-    }
   }
 
-  private Node resolveName (Ref.Global id, Kind kind, boolean create) {
-    if (id == Ref.Global.ROOT) return _rootName;
-    else {
-      // TODO: will we need to initialize kind on name nodes that were created as parents but then
-      // turned out to be real nodes? I don't think so, but confirmation is needed...
-      Node parent = resolveName(id.parent, null, create);
-      for (Relationship r : parent.getRelationships(Edge.NAME_NAME, Direction.OUTGOING)) {
-        if (NAME.get(r).equals(id.id)) return r.getEndNode();
-      }
-      if (!create) return null;
-      // create a new name node, and wire it up to its parent with a named edge
-      Node namen = _db.createNode(Entity.NAME);
-      System.out.println("Created NAME node (" + id + ") " + namen.getId());
-      Relationship r = parent.createRelationshipTo(namen, Edge.NAME_NAME);
-      NAME.set(r, id.id);
-      if (kind != null) KIND.set(r, kind);
-      return namen;
+  private Node resolveName (Ref.Global id, Kind kind) {
+    String idStr = id.toString();
+    Node namen = findNode(Entity.NAME, NAME.name, idStr);
+    if (namen == null && kind != null) { // non-null kind means create if missing
+      namen = _db.createNode(Entity.NAME);
+      NAME.set(namen, idStr);
+      KIND.set(namen, kind);
     }
+    return namen;
   }
 
   private Ref.Global globalRef (Node namen) {
-    if (namen == _rootName) return Ref.Global.ROOT;
-    else {
-      Node namep = namen.getSingleRelationship(Edge.NAME_NAME, Direction.INCOMING).getStartNode();
-      return globalRef(namep).plus(NAME.get(namen));
-    }
+    return Ref.Global.fromString(NAME.get(namen));
   }
 
   private Ref makeRef (Node namen) {
@@ -619,10 +598,7 @@ public class Neo4jStore extends ProjectStore {
   }
 
   private final Path _store;
-  // these are nearly final, only change in clear()
   private GraphDatabaseService _db;
-  private Node _rootName;
 
-  private static final String ROOT_NAME_NAME = "__Neo4jNameRoot__";
   private static final int SCHEMA_VERS = 1;
 }
