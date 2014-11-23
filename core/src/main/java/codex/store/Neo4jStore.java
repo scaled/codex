@@ -125,7 +125,6 @@ public class Neo4jStore extends ProjectStore {
       Node unitn = findNode(Entity.UNIT, SOURCE.name, srcKey);
       if (unitn == null) {
         unitn = _db.createNode(Entity.UNIT);
-        System.out.println("Created UNIT node (" + source + ") " + unitn.getId());
         SOURCE.set(unitn, srcKey);
       }
       LAST_INDEXED.set(unitn, indexed);
@@ -157,7 +156,6 @@ public class Neo4jStore extends ProjectStore {
       if (drel != null) defn = drel.getEndNode();
       else {
         defn = _db.createNode(Entity.DEF);
-        // System.out.println("Created DEF node (" + inf.id + ") " + defn.getId());
         unitn.createRelationshipTo(defn, Edge.UNIT_DEF);
         namen.createRelationshipTo(defn, Edge.NAME_DEF);
         if (inf.outer.defId == null) defn.addLabel(Entity.TOP_DEF);
