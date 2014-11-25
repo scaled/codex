@@ -6,4 +6,6 @@ descrip: A framework for grokking code.
 license: New BSD
  module: core
  module: java
+ jcopts: -source 1.8 -target 1.8 -Xlint:all -Xlint:-serial
+ scopts: -deprecation -feature -optimize
 testdep: mvn:junit:junit:4.11
