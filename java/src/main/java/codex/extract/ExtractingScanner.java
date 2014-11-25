@@ -140,12 +140,16 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // emit supertype relations
     Type t = tree.type;
     if (t != null) {
-      Type st = _types.supertype(t);
-      Ref.Global stgt = targetForTypeSym(_types.erasure(st).tsym);
-      writer.emitRelation(Relation.INHERITS, stgt);
-      writer.emitRelation(Relation.SUPERTYPE, stgt);
-      for (Type it : _types.interfaces(t)) writer.emitRelation(
-        Relation.SUPERTYPE, targetForTypeSym(_types.erasure(it).tsym));
+      TypeSymbol est = _types.erasure(_types.supertype(t)).tsym;
+      if (est != null) {
+        Ref.Global stgt = targetForTypeSym(est);
+        writer.emitRelation(Relation.INHERITS, stgt);
+        writer.emitRelation(Relation.SUPERTYPE, stgt);
+      }
+      for (Type it : _types.interfaces(t)) {
+        TypeSymbol eit = _types.erasure(it).tsym;
+        if (eit != null) writer.emitRelation(Relation.SUPERTYPE, targetForTypeSym(eit));
+      }
     }
 
     // name in anon classes is "", but for signature generation we want to replace it with the
