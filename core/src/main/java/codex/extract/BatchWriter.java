@@ -26,6 +26,7 @@ public abstract class BatchWriter extends Writer {
   @Override public void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
                                  boolean exported, Access access,
                                  int offset, int bodyStart, int bodyEnd) {
+    checkTarget(id, "openDef");
     _curDef = _curDef.addDef(new DefInfo(_curDef, id, name, kind, flavor, exported, access,
                                          offset, bodyStart, bodyEnd));
   }
@@ -34,6 +35,7 @@ public abstract class BatchWriter extends Writer {
     _curDef.sig = new SigInfo(text);
   }
   @Override public void emitSigUse (Ref.Global target, String name, Kind kind, int offset) {
+    checkTarget(target, "emitSigUse");
     _curDef.sig.addUse(new UseInfo(target, kind, offset, name.length()));
   }
 
@@ -41,14 +43,17 @@ public abstract class BatchWriter extends Writer {
     _curDef.doc = new DocInfo(offset, length);
   }
   @Override public void emitDocUse (Ref.Global target, String name, Kind kind, int offset) {
+    checkTarget(target, "emitDocUse");
     _curDef.doc.addUse(new UseInfo(target, kind, offset, name.length()));
   }
 
   @Override public void emitUse (Ref.Global target, String name, Kind kind, int offset) {
+    checkTarget(target, "emitUse");
     _curDef.addUse(new UseInfo(target, kind, offset, name.length()));
   }
 
   @Override public void emitRelation (Relation relation, Ref.Global target) {
+    checkTarget(target, "emitRelation");
     _curDef.addRelation(relation, target);
   }
 
@@ -60,6 +65,11 @@ public abstract class BatchWriter extends Writer {
     storeUnit(_curSource, _curDef);
     _curSource = null;
     _curDef = null;
+  }
+
+  private void checkTarget (Ref.Global target, String from) {
+    if (target == Ref.Global.ROOT) throw new IllegalArgumentException(
+      "Cannot call " + from + " with ROOT name.");
   }
 
   protected abstract void storeUnit (Source source, DefInfo topDef);
