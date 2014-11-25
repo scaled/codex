@@ -7,6 +7,7 @@ package codex.model;
 import codex.store.ProjectStore;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Represents the definition of a name somewhere in code.
@@ -83,6 +84,11 @@ public final class Def implements Element {
   /** Resolves and returns the members nested directly under this def. */
   public Iterable<Def> members () {
     return project.defsIn(id);
+  }
+
+  /** Returns all refs matching {@code (thisDefId, rel, ref)}. */
+  public Set<Ref> relations (Relation rel) {
+    return project.relationsFrom(rel, id);
   }
 
   /** Resolves and returns this def's enclosing def. Returns null if it is not enclosed. */
