@@ -1,2 +1,2 @@
-depend: mvn:com.google.guava:guava:18.0
+depend: git:https://github.com/scaled/scaled.git#std
 depend: mvn:org.mapdb:mapdb:1.0.6

@@ -5,7 +5,7 @@
 package codex.extract;
 
 import codex.model.*;
-import codex.store.MapDBStore;
+import codex.store.*;
 import com.google.common.base.Joiner;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -45,8 +45,8 @@ public class TokenExtractorTest {
 
   @Test public void testBasics () throws IOException {
     TokenExtractor ex = new TokenExtractor();
-    MapDBStore store = new MapDBStore("test");
-    ex.process("TestA.scala", TESTA, store.writer);
+    ProjectStore store = new MapDBStore("test");
+    ex.process("TestA.scala", TESTA, store.writer());
     // store.visit(new Source.File("TestA.scala"), el -> System.out.println(el));
 
     Ref.Global baz = Ref.Global.fromString("com.test Foo Bar baz");
@@ -64,8 +64,8 @@ public class TokenExtractorTest {
 
   @Test public void testTypeParams () throws IOException {
     TokenExtractor ex = new TokenExtractor();
-    MapDBStore store = new MapDBStore("test");
-    ex.process("List.scala", LIST, store.writer);
+    ProjectStore store = new MapDBStore("test");
+    ex.process("List.scala", LIST, store.writer());
     // store.visit(new Source.File("List.scala"), el -> System.out.println(el));
 
     Ref.Global map = Ref.Global.fromString("com.test List map");

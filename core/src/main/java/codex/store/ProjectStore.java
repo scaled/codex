@@ -88,6 +88,13 @@ public abstract class ProjectStore implements AutoCloseable {
   /** Returns a debug representation of {@code id}. */
   public abstract String idToString (Long id);
 
+  /** Deletes the contents of this project store; in preparation for a full reindex. */
+  public abstract void clear ();
+
+  /** Closes this store and releases any underlying resources.
+    * The store cannot be used after being closed. */
+  public abstract void close ();
+
   /**
    * Delivers all known defs and uses in {@code source} to {@code cons}. The order in which the defs
    * and uses is unspecified, other than that each def will be immediately followed by the uses
