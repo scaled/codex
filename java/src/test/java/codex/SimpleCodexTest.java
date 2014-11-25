@@ -58,7 +58,7 @@ public class SimpleCodexTest {
     extract = new JavaExtractor() {
       @Override public Iterable<Path> classpath () { return classpath; }
     };
-    extract.process(codexSources(), store.writer);
+    extract.process(codexSources(), store.writer());
   }
 
   @AfterClass public static void clearStore () {
@@ -74,10 +74,10 @@ public class SimpleCodexTest {
     if (false) {
       String zip = System.getProperty("user.home") +
         "/.m2/repository/com/google/guava/guava/16.0.1/guava-16.0.1-sources.jar";
-      extract.process(new ZipFile(zip), store.writer);
+      extract.process(new ZipFile(zip), store.writer());
     } else {
       String zip = System.getProperty("java.home") + "/../src.zip";
-      extract.process(new ZipFile(zip), e -> e.getName().startsWith("java"), store.writer);
+      extract.process(new ZipFile(zip), e -> e.getName().startsWith("java"), store.writer());
     }
     System.out.println(store.defCount() + " defs.");
     System.out.println(store.nameCount() + " (exported) names.");
@@ -99,7 +99,7 @@ public class SimpleCodexTest {
   @Test public void testSimpleCodex () {
     Ref locref = Ref.global("codex.model", "Ref", "Local");
     Optional<Def> locdef = Ref.resolve(stores, locref);
-    assertTrue(locdef.isPresent());
+    assertTrue("resolve(" + locref + ").isPresent", locdef.isPresent());
     Def def = locdef.get();
     assertTrue(def.source().toString().endsWith("Ref.java"));
     assertEquals("static final class Local extends Ref", def.sig().get().text);
