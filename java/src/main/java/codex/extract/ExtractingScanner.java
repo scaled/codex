@@ -31,8 +31,9 @@ import static codex.extract.Utils.*;
 
 public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
-  public ExtractingScanner (Types types) {
+  public ExtractingScanner (Types types, boolean omitBodies) {
     _types = types;
+    _omitBodies = omitBodies;
   }
 
   public void extract (Tree ast, Writer writer) throws IOException {
@@ -216,7 +217,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       DefDoc doc = findDoc(treeStart);
       doc.emit(writer);
       _doc.push(doc);
-      super.visitMethod(node, writer);
+      if (!_omitBodies) super.visitMethod(node, writer);
       writer.closeDef();
 
       _doc.pop();
@@ -254,9 +255,11 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   }
 
   @Override public Void visitBlock (BlockTree node, Writer writer) {
-    _symtab.push(new HashMap<>());
-    super.visitBlock(node, writer);
-    _symtab.pop();
+    if (!_omitBodies) {
+      _symtab.push(new HashMap<>());
+      super.visitBlock(node, writer);
+      _symtab.pop();
+    }
     return null;
   }
 
@@ -634,4 +637,5 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   private String _text;
 
   private final Types _types;
+  private final boolean _omitBodies;
 }

@@ -46,6 +46,15 @@ public class JavaExtractor implements Extractor {
     _compiler = compiler;
   }
 
+  /** Configures this extractor in summary mode. This causes it to omit the bodies of methods and
+    * blocks when indexing. This is useful when indxing the JDK, where the shape of each class is
+    * useful, but the actual implementations, not so much.
+    */
+  public JavaExtractor summaryMode () {
+    _omitBodies = true;
+    return this;
+  }
+
   /** Provides the classpath used by the compiler. */
   public Iterable<Path> classpath () { return Collections.emptyList(); }
 
@@ -116,7 +125,7 @@ public class JavaExtractor implements Extractor {
       writer.openSession();
       try {
         Context context = task.getContext();
-        ExtractingScanner scanner = new ExtractingScanner(Types.instance(context));
+        ExtractingScanner scanner = new ExtractingScanner(Types.instance(context), _omitBodies);
         for (CompilationUnitTree tree : asts) {
           if (filter(tree.getSourceFile())) scanner.extract(tree, writer);
         }
@@ -155,4 +164,5 @@ public class JavaExtractor implements Extractor {
   }
 
   private final JavacTool _compiler;
+  private boolean _omitBodies;
 }
