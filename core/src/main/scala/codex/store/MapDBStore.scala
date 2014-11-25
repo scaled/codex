@@ -134,12 +134,12 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
         case null => Seq()
         case infos =>
           val ub = Seq.builder[PUse](infos.size)
-          for (ui <- infos) ub += PUse(resolveName(ui.ref, ui.refKind, 0), ui.offset, ui.length)
+          for (ui <- infos) ub += PUse(resolveUseName(ui.ref, ui.refKind), ui.offset, ui.length)
           ub.build()
       }
 
       def storeDef (inf :DefInfo) {
-        val defId = toDefId(resolveName(inf.id, inf.kind, unitId), unitId)
+        val defId = resolveDefId(inf.id, inf.kind, unitId)
         val df = inf.toDef(MapDBStore.this, defId, inf.outer.defId)
         _defs.put(df.id, df)
         newSourceIdsB += df.id
@@ -200,7 +200,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
         val rels = if (inf.relations == null) Collections.emptySet() else {
           val rels = new HashSet[Fun.Tuple3[Id,Integer,Id]]()
           inf.relations.foreach { r =>
-            rels.add(Fun.t3(defId, r.relation.code, resolveName(r.target, null, 0)))
+            rels.add(Fun.t3(defId, r.relation.code, resolveName(r.target)))
           }
           rels
         }
@@ -415,33 +415,47 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
 
   private def lookupName (ref :Ref.Global) :Id = _fqNames.get(ref.toString)
 
-  private def resolveName (ref :Ref.Global, kind :Kind, unitId :Int) :Id = {
-    val fqKey = ref.toString
-    val nmid = _fqNames.get(fqKey)
-    if (nmid == null) {
-      val parentId = if (ref.parent == Ref.Global.ROOT) ZeroId
-                     else resolveName(ref.parent, null, 0)
-      val nameId = _maxNameId.addAndGet(UNIT_SKIP)
-      val name = Name(ref.id, parentId, kind, unitId)
-      _names.put(nameId, name)
-      _fqNames.put(fqKey, nameId)
-      nameId
-    } else {
-      // if we were supplied with a unitId or kind, make sure they're correct
-      if (unitId > 0 || kind != null) {
-        val name = _names.get(nmid)
-        // this logic is a little twisty
-        if (unitId > 0) {
-          // either we're resolving a def, in which case we have a unitId and kind
-          if (name.unitId != unitId) _names.put(nmid, name.copy(kind=kind, unitId=unitId))
-        } else if (kind != null) {
-          // or we're resolving a use, and just have a kind (but don't want to overwrite unitId)
-          if (name.kind != kind) _names.put(nmid, name.copy(kind=kind))
-        }
-      }
-      nmid
-    }
+  private def addName (ref :Ref.Global, kind :Kind, unitId :Int) :Id = {
+    val parentId = if (ref.parent == Ref.Global.ROOT) ZeroId
+                   else resolveName(ref.parent)
+    val nameId :Id = _maxNameId.addAndGet(UNIT_SKIP)
+    _names.put(nameId, Name(ref.id, parentId, kind, unitId))
+    _fqNames.put(ref.toString, nameId)
+    nameId
   }
+
+  // these resolve methods are similar, but combining them all together results in a complex,
+  // incomprehensible mess, instead we separate out the three name resolution cases into three
+  // methods:
+  // resolveName - resolves the target of a RELATION, nothing is known about the name
+  // resolveUseName - resolves the target of a USE, the kind may need to be updated
+  // resolveDefId - resolves the nameId + unitId of a DEF, the kind and unitId may need to be
+  //                updated, and we return a defId, not a nameId (unlike the other methods)
+
+  private def resolveName (ref :Ref.Global) :Id = _fqNames.get(ref.toString) match {
+    case null => addName(ref, null, 0)
+    case nmid => nmid
+  }
+
+  private def resolveUseName (ref :Ref.Global, kind :Kind) :Id = _fqNames.get(ref.toString) match {
+    case null => addName(ref, kind, 0)
+    case nmid =>
+      val name = _names.get(nmid)
+      if (kind != name.kind) _names.put(nmid, name.copy(kind=kind))
+      nmid
+  }
+
+  private def resolveDefId (ref :Ref.Global, kind :Kind, unitId :Int) :Id =
+    _fqNames.get(ref.toString) match {
+      case null => addName(ref, kind, unitId) | unitId
+      case nmid =>
+        val name = _names.get(nmid)
+        if (name.unitId != 0) nmid | name.unitId
+        else {
+          _names.put(nmid, name.copy(kind=kind, unitId=unitId))
+          nmid | unitId
+        }
+    }
 
   private[store] def resolveUses (puses :Seq[PUse]) :JList[Use] = {
     val uses = new ArrayList[Use](puses.size)
