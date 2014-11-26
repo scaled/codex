@@ -4,6 +4,8 @@
 
 package codex.extract;
 
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 import com.sun.tools.javac.api.JavacTool;
 import com.sun.tools.javac.file.JavacFileManager;
 import com.sun.tools.javac.file.ZipArchive;
@@ -18,6 +20,20 @@ import java.util.zip.ZipFile;
 import javax.tools.JavaFileObject;
 
 public class ZipUtils {
+
+  public static Multiset<String> summarizeSources (ZipFile file) {
+    Multiset<String> suffs = HashMultiset.create();
+    file.stream().forEach(e -> suffs.add(suffix(e.getName())));
+    return suffs;
+  }
+
+  private static String suffix (String name) {
+    return name.substring(name.lastIndexOf('.')+1);
+  }
+
+  public static Predicate<ZipEntry> ofSuff (String suff) {
+    return (e -> e.getName().endsWith(suff));
+  }
 
   public static List<JavaFileObject> zipFiles (JavacTool javac, ZipFile file,
                                                Predicate<ZipEntry> filter) throws IOException {
