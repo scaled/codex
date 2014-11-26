@@ -55,4 +55,30 @@ public class JavaExtractorTest {
     ex.process("TestLam.java", TESTLAM, new TextWriter(new PrintWriter(out)));
     // System.out.println(out.toString());
   }
+
+  public final String TEST_OVERRIDES = Joiner.on("\n").join(
+    "package foo.bar;",
+    "public class TestOverrides {",
+    "    public interface A {",
+    "        public int foo ();",
+    "    }",
+    "    public static class B {",
+    "        public int foo () { return 0; }",
+    "    }",
+    "    public static class C extends B implements A {",
+    "        @Override public int foo () { return 1; }",
+    "    }",
+    "}");
+
+  @Test public void testOverrides () {
+    JavaExtractor ex = new JavaExtractor();
+    StringWriter out = new StringWriter();
+    ex.process("TestOverrides.java", TEST_OVERRIDES, new TextWriter(new PrintWriter(out)));
+    String dump = out.toString();
+    // C.foo() should override both A.foo() and B.foo()
+    assertTrue("C.foo overrides A.foo",
+               dump.contains("relation OVERRIDES foo.bar TestOverrides A foo()int"));
+    assertTrue("C.foo overrides B.foo",
+               dump.contains("relation OVERRIDES foo.bar TestOverrides B foo()int"));
+  }
 }

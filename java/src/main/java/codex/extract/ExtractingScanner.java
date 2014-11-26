@@ -435,14 +435,9 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     for (Type sup : _types.closure(owner.type)) {
       if (sup != owner.type) {
         Scope scope = sup.tsym.members();
-        Scope.Entry e = scope.lookup(m.name);
-        while (e.scope != null) {
-          if (e.sym.isStatic() || !m.overrides(e.sym, owner, _types, true)) e = e.next();
-          else {
+        for (Scope.Entry e = scope.lookup(m.name); e.scope != null; e = e.next()) {
+          if (!e.sym.isStatic() && m.overrides(e.sym, owner, _types, true)) {
             writer.emitRelation(Relation.OVERRIDES, targetForTypeSym(e.sym));
-            // TODO: strictly speaking, this should find all interface methods but currently it
-            // stops at the first
-            return;
           }
         }
       }
