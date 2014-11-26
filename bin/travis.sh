@@ -23,5 +23,5 @@ chmod a+rx spam
 
 # then run our tests
 cd $TOPDIR/test
-spam run codex#test org.junit.runner.JUnitCore \
+./spam run codex#test org.junit.runner.JUnitCore \
   `find src -name '*Test.java' | sed 's:src/main/java/::' | sed 's:.java::' | sed 's:/:.:g'`
