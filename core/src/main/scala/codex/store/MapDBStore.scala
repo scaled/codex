@@ -400,7 +400,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
   private def globalRef (nameId :Id) :Ref.Global =
     if (nameId == ZeroId) Ref.Global.ROOT
     else _names.get(nameId) match {
-      case null => throw new IllegalStateException(s"Missing name: $nameId")
+      case null => println(s"Missing name: $this @ $nameId") ; Ref.Global.ROOT.plus("!invalid!")
       case name => globalRef(name.parentId).plus(name.id)
     }
 
