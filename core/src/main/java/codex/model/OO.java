@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Utility methods for doing OO things with the Codex model.
@@ -21,8 +22,12 @@ public class OO {
    * closure of the defs related to class via the {@link Relation.INHERITS} and {@link SUPERTYPE}
    * relations. {@link Relation.OVERRIDES} is used to filter out methods from supertypes which are
    * overridden in a subtype.
+   *
+   * @param filter a filter applied to all member defs prior to inclusion. This can be used to
+   * filter out, for example, static defs or private defs, or whatnot.
    */
-  public static List<Def> resolveMethods (Iterable<ProjectStore> stores, Def clazz) {
+  public static List<Def> resolveMethods (Iterable<ProjectStore> stores, Def clazz,
+                                          Predicate<Def> filter) {
     Set<Ref.Global> skips = new HashSet<>(), seen = new HashSet<>();
     seen.add(clazz.globalRef());
     List<Def> mems = new ArrayList<>(), remain = new ArrayList<>();
@@ -31,7 +36,7 @@ public class OO {
     while (!remain.isEmpty()) {
       Def typ = remain.remove(0);
       for (Def mem : typ.members()) {
-        if (mem.kind != Kind.FUNC) continue;
+        if (mem.kind != Kind.FUNC || !filter.test(mem)) continue;
         for (Ref oref : mem.relations(Relation.OVERRIDES)) skips.add(toGlobalRef(oref));
         if (!skips.contains(mem.globalRef())) mems.add(mem);
       }

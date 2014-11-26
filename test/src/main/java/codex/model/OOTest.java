@@ -29,7 +29,7 @@ public class OOTest {
     List<ProjectStore> stores = Collections.singletonList(store);
     Def usedef = Ref.resolve(stores, Ref.global("codex.model", "Use")).get();
     Set<Ref.Global> refs = new HashSet<>();
-    for (Def meth : OO.resolveMethods(stores, usedef)) refs.add(meth.globalRef());
+    for (Def meth : OO.resolveMethods(stores, usedef, d -> true)) refs.add(meth.globalRef());
     assertTrue(refs.contains(Ref.Global.fromString("codex.model Use kind()codex.model.Kind")));
     // this will have been overridden by the above
     assertFalse(refs.contains(Ref.Global.fromString("codex.model Element kind()codex.model.Kind")));
