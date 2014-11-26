@@ -19,9 +19,9 @@ wget https://raw.githubusercontent.com/scaled/pacman/master/bin/spam
 chmod a+rx spam
 
 # install/build the package
-./spam -d -Dscaled.meta=$SPAM install $PACKAGE
+$SPAM/spam -d -Dscaled.meta=$SPAM install $PACKAGE
 
 # then run our tests
 cd $TOPDIR/test
-$SPAM/spam run codex#test org.junit.runner.JUnitCore \
+$SPAM/spam -d -Dscaled.meta=$SPAM run codex#test org.junit.runner.JUnitCore \
   `find src -name '*Test.java' | sed 's:src/main/java/::' | sed 's:.java::' | sed 's:/:.:g'`
