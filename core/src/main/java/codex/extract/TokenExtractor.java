@@ -22,6 +22,7 @@ import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -45,9 +46,16 @@ public class TokenExtractor implements Extractor {
 
   /** Processes all source files in {@code zip}. Metadata is emitted to {@code writer}. */
   public void process (Path file, ZipFile zip, Writer writer) throws IOException {
+    process(file, zip, e -> true, writer);
+  }
+
+  /** Processes all source files in {@code zip} which match {@filter}.
+    * Metadata is emitted to {@code writer}. */
+  public void process (Path file, ZipFile zip, Predicate<ZipEntry> filter,
+                       Writer writer) throws IOException {
     writer.openSession();
     try {
-      for (ZipEntry entry : zip.stream().collect(Collectors.<ZipEntry>toList())) {
+      for (ZipEntry entry : zip.stream().filter(filter).collect(Collectors.<ZipEntry>toList())) {
         process(new Source.ArchiveEntry(file.toString(), entry.getName()),
                 new InputStreamReader(zip.getInputStream(entry), "UTF-8"), writer);
       }
