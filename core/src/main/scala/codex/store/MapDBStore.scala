@@ -155,13 +155,9 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
           // now update our member def ids mapping
           val memDefIds = df.memDefIds
           // if this def spans source files, do more complex member def merging
-          if (defSpansSources(df)) {
-            val oldMemDefIds = _defMems.getOrDefault(df.defId, NoIds)
-            oldMemDefIds foreach { id =>
-              if (!oldSourceIds.contains(id)) memDefIds.add(id)
-            }
-          }
-          val ids = if (memDefIds == null) NoIds else NoIds ++ asScalaSet(memDefIds)
+          val extMemDefIds = if (!defSpansSources(df)) NoIds
+                             else _defMems.getOrDefault(df.defId, NoIds) -- oldSourceIds
+          val ids = extMemDefIds ++ (if (memDefIds == null) NoIds else asScalaSet(memDefIds))
           if (ids.isEmpty) _defMems.remove(df.defId)
           else _defMems.put(df.defId, ids)
         }
