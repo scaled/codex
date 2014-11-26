@@ -26,7 +26,6 @@ public class ZipUtils {
     ZipArchive arch = new ZipArchive(fm, file);
     for (ZipEntry entry : file.stream().collect(Collectors.<ZipEntry>toList())) {
       String name = entry.getName();
-      name = name.substring(name.lastIndexOf("/")+1);
       if (name.endsWith(".java") && filter.test(entry)) {
         try {
           files.add((ZipArchive.ZipFileObject)zfoCtor.newInstance(arch, name, entry));
