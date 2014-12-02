@@ -230,27 +230,28 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
   @Override public Void visitTypeParameter (TypeParameterTree node, Writer writer) {
     JCTypeParameter tree = (JCTypeParameter)node;
+    if (tree.type != null) { // sometimes the type isn't resolved; not sure why...
+      String name = node.getName().toString();
+      int offset = tree.getStartPosition();
+      _id = _id.plus(name);
+      writer.openDef(_id, name, Kind.TYPE, Flavor.TYPE_PARAM, false, Access.PRIVATE,
+                     offset, offset, offset + name.length());
 
-    String name = node.getName().toString();
-    int offset = tree.getStartPosition();
-    _id = _id.plus(name);
-    writer.openDef(_id, name, Kind.TYPE, Flavor.TYPE_PARAM, false, Access.PRIVATE,
-                   offset, offset, offset + name.length());
+      // make super the erased type(s) of the tvar (TODO: handle intersection types)
+      Type stype = _types.erasure(tree.type);
+      writer.emitRelation(Relation.SUPERTYPE, targetForTypeSym(stype.tsym));
 
-    // make super the erased type(s) of the tvar (TODO: handle intersection types)
-    Type stype = _types.erasure(tree.type);
-    writer.emitRelation(Relation.SUPERTYPE, targetForTypeSym(stype.tsym));
+      new SigPrinter(_id, null).emit(tree, writer);
 
-    new SigPrinter(_id, null).emit(tree, writer);
+      // see if we have "@param <T>" style documentation for this type parameter
+      DefDoc curdoc = _doc.peek();
+      if (curdoc != null) curdoc.emitParam("<" + name + ">", writer);
 
-    // see if we have "@param <T>" style documentation for this type parameter
-    DefDoc curdoc = _doc.peek();
-    if (curdoc != null) curdoc.emitParam("<" + name + ">", writer);
+      super.visitTypeParameter(node, writer);
+      writer.closeDef();
 
-    super.visitTypeParameter(node, writer);
-    writer.closeDef();
-
-    _id = _id.parent;
+      _id = _id.parent;
+    }
     return null;
   }
 
