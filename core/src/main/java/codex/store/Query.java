@@ -49,11 +49,11 @@ public class Query {
 
   /** Copies this query and sets {@link #kinds} to just {@code kind}. */
   public Query kind (Kind kind) {
-    return new Query(EnumSet.of(kind), name, prefix, locality);
+    return kinds(EnumSet.of(kind));
   }
-  /** Copies this query and sets {@link #kinds} to {@code first} and {@code rest}. */
-  public Query kinds (Kind first, Kind... rest) {
-    return new Query(EnumSet.of(first, rest), name, prefix, locality);
+  /** Copies this query and sets {@link #kinds} to {@code kinds}. */
+  public Query kinds (Set<Kind> kinds) {
+    return new Query(kinds, name, prefix, locality);
   }
   /** Copies this query and configures it to return only exported defs. */
   public Query expExportedOnly () {
