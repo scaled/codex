@@ -2,26 +2,8 @@
 #
 # Builds and tests (for travis-ci.org)
 
-PACKAGE=git:https://github.com/scaled/codex.git
-
 set -e
-TOPDIR=`pwd`
-
-# create and clean our temp build directory
-mkdir -p target/spam
-SPAM=`cd target/spam ; pwd`
-rm -rf $SPAM/*
-cd $SPAM
-
-# download the spam script
-rm -f spam
-wget https://raw.githubusercontent.com/scaled/pacman/master/bin/spam
-chmod a+rx spam
-
-# install/build the package
-$SPAM/spam -d -Dscaled.meta=$SPAM install $PACKAGE
-
-# then run our tests
-cd $TOPDIR/test
-$SPAM/spam -d -Dscaled.meta=$SPAM run codex#test org.junit.runner.JUnitCore \
-  `find src -name '*Test.java' | sed 's:src/main/java/::' | sed 's:.java::' | sed 's:/:.:g'`
+GITURL=`git remote -v | grep origin | grep fetch | awk '{ print $2 }'`
+wget https://raw.githubusercontent.com/scaled/pacman/master/bin/build-test.sh
+sh build-test.sh git:$GITURL
+rm build-test.sh
