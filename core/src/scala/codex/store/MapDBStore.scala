@@ -467,26 +467,33 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     // we want to remove defs from highest def id to lowest,
     // so that we're sure to remove children before parents
     Seq.builder[Id].append(defIds).build().reverse foreach { defId =>
-      // remove the def from the myriad def maps
-      _topDefs.remove(defId)
       val df = _defs.remove(defId)
-      _defMems.remove(defId)
-      _defUses.remove(defId)
-      _defSig.remove(defId)
-      _defDoc.remove(defId)
-      // remove any uses record for the def
-      val nameId = toNameId(defId)
-      _useBySrc.remove(nameId)
-      // remove the def's name from the name tables and by-name indices
-      val name = _names.remove(nameId)
-      if (name == null) println(s"No name for ${idToString(defId)} / $df")
-      else try {
-        _indices(name.kind).remove(Fun.t2(name.id.toLowerCase, defId))
-        // do this last because it could choke if somehow a name was missing up the chain
-        val ref = globalRef(name.parentId).plus(name.id)
-        _fqNames.remove(ref.toString)
-      } catch {
-        case t :Throwable => println(s"Remove name choked ${idToString(defId)} / $df / $name: $t")
+      // if this def is a module, we can't delete it because it may be "defined" by multiple source
+      // files, so the fact that one source file no longer defines it does not mean it is no longer
+      // in use; so put it back; I don't have any good ideas on how to avoid leaking module defs
+      // without making def removal way more expensive, so I'm going to punt; do a full reindex!
+      if (df.kind == Kind.MODULE) _defs.put(defId, df)
+      else {
+        // remove the def from the myriad def maps
+        _topDefs.remove(defId)
+        _defMems.remove(defId)
+        _defUses.remove(defId)
+        _defSig.remove(defId)
+        _defDoc.remove(defId)
+        // remove any uses record for the def
+        val nameId = toNameId(defId)
+        _useBySrc.remove(nameId)
+        // remove the def's name from the name tables and by-name indices
+        val name = _names.remove(nameId)
+        if (name == null) println(s"No name for ${idToString(defId)} / $df")
+        else try {
+          _indices(name.kind).remove(Fun.t2(name.id.toLowerCase, defId))
+          // do this last because it could choke if somehow a name was missing up the chain
+          val ref = globalRef(name.parentId).plus(name.id)
+          _fqNames.remove(ref.toString)
+        } catch {
+          case t :Throwable => println(s"Remove name choked ${idToString(defId)} / $df / $name: $t")
+        }
       }
     }
   }
