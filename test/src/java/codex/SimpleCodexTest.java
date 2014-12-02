@@ -29,7 +29,7 @@ public class SimpleCodexTest {
 
   public static List<Path> codexSources () throws IOException {
     List<Path> sources = new ArrayList<>();
-    Path root = Paths.get(System.getProperty("user.dir")).resolve("../core/src/main/java");
+    Path root = Paths.get(System.getProperty("user.dir")).resolve("../core/src/java");
     if (Files.exists(root)) {
       Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
         public FileVisitResult visitFile (Path file, BasicFileAttributes attrs) {
