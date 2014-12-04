@@ -19,8 +19,10 @@ abstract class ScalaExtractor extends Extractor {
   /** Provides the classpath used by the compiler. */
   def classpath :Iterable[Path]
 
-  override def process (files :JIterable[Path], writer :Writer) {
-    process0(files.toList.map(f => new BatchSourceFile(AbstractFile.getFile(f.toFile))), writer)
+  override def process (sources :SourceSet, writer :Writer) = sources match {
+    case sf :SourceSet.Files => process0(
+      sf.paths.toList.map(f => new BatchSourceFile(AbstractFile.getFile(f.toFile))), writer)
+    case sa :SourceSet.Archive => // TODO
   }
 
   /** Processes the test `file` `(name, code)`. Metadata is emitted to `writer`. */

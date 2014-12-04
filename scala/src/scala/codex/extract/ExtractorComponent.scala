@@ -36,7 +36,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
 
     override def traverse (tree :Tree) :Unit = tree match {
       case t @ PackageDef(pid, stats) => {
-        val pname = pid.toString
+        val pname = pkgName(t.symbol)
         withId(pname) {
           val pos = decode(t.pos)
           writer.openDef(_id, pname, CKind.MODULE, Flavor.PACKAGE, true, Access.PUBLIC,
@@ -77,17 +77,21 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
         //   _id = _id.parent;
         // }
 
-        val cname = name.toString
-        withId(cname) {
-          val flavor = Flavor.CLASS // TODO
-          val isExp = true // TODO
-          val pos = decode(t.pos)
-          println(s"ClassDef($cname, $pos)")
-          writer.openDef(_id, cname, CKind.TYPE, flavor, isExp, access(mods),
-                         pos.offset, pos.bstart, pos.bend)
-          emitSig(tree, writer)
-          super.traverse(tree)
-          writer.closeDef()
+        val sym = t.symbol
+        if (!isIgnored(sym)) {
+          val cname = name.toString
+          withId(cname) {
+            val kind = if (sym.isModuleClass) CKind.MODULE else CKind.TYPE
+            val flavor = if (sym.isModuleClass) Flavor.OBJECT else Flavor.CLASS // TODO: trait
+            val isExp = true // TODO
+            val pos = decode(t.pos)
+            // println(s"ClassDef($cname, ${t.pos}, ${impl.pos})")
+            writer.openDef(_id, cname, kind, flavor, isExp, access(mods),
+                           pos.offset, pos.bstart, pos.bend)
+            emitSig(tree, writer)
+            super.traverse(tree)
+            writer.closeDef()
+          }
         }
       }
 
@@ -121,7 +125,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
                          else Flavor.LOCAL
             val isExp = true // TODO
             val pos = decode(t.pos)
-            println(s"ValDef($vname, ${sym.flagString}, $pos)")
+            // println(s"ValDef($vname, ${sym.flagString}, $pos)")
             writer.openDef(_id, vname, CKind.VALUE, flavor, isExp, access(mods),
                            pos.offset, pos.bstart, pos.bend)
             emitSig(tree, writer)
@@ -145,7 +149,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
           val dname = if (isCtor) currentOwner.name.toString // owning class name
                       else name.toString
           val mname = dname + trimArgs(sym.tpe.toString)
-          println(s"DefDef($mname, ${sym.flagString}, stable=${sym.isStable}, $pos)")
+          // println(s"DefDef($mname, ${sym.flagString}, stable=${sym.isStable}, $pos)")
           withId(mname) {
             writer.openDef(_id, dname, CKind.FUNC, flavor, isExp, access(mods),
                            pos.offset, pos.bstart, pos.bend)
@@ -164,7 +168,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
         val sym = t.symbol
         if (!isIgnored(sym)) {
           val pos = decode(t.pos)
-          println(s"Ident($name) -> " + pos)
+          // println(s"Ident($name) -> " + pos)
           writer.emitUse(ref(sym), sym.nameString, kind(sym), pos.offset)
           super.traverse(tree)
         }
@@ -174,7 +178,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
         val sym = t.symbol
         if (!isIgnored(sym)) {
           val pos = decode(t.pos)
-          println(s"Select($qual, $name) -> " + pos)
+          // println(s"Select($qual, $name) -> " + pos)
           writer.emitUse(ref(sym), sym.nameString, kind(sym), pos.offset)
           super.traverse(tree)
         }
@@ -183,26 +187,21 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
       case tt :TypeTree => {
         val sym = tt.symbol
         val pos = decode(tt.pos)
-        println(s"TypeTree($tt, $pos)")
+        // println(s"TypeTree($tt, $pos)")
         writer.emitUse(ref(sym), sym.nameString, kind(sym), pos.offset)
       }
-
-      // case Apply(fun, args) => {
-      //   println("traversing application of "+ fun)
-      //   super.traverse(tree)
-      // }
 
       case _ =>
         val sym = tree.symbol
         if (sym == null || !isIgnored(sym)) {
-          println("TODO " + tree.getClass)
+          // println("TODO " + tree.getClass)
           super.traverse(tree)
         }
     }
 
     private def isIgnored (sym :Symbol) = (!sym.exists ||
                                            sym.isImplementationArtifact ||
-                                           sym.isModuleClass ||
+                                           // sym.isModuleClass ||
                                            sym.isPrimaryConstructor ||
                                            sym.isImplClass)
 
@@ -216,8 +215,20 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
     }
 
     private def ref (sym :Symbol) :Ref.Global = {
+      def name :String = sym.nameString + (if (sym.isMethod) trimArgs(sym.tpe.toString) else "")
       if (sym.isRoot || sym.isEmptyPackageClass) Ref.Global.ROOT
-      else ref(sym.owner).plus(sym.nameString)
+      // TODO: coalesce all packages above this one; Scala treats each package in the path as a
+      // separate symbol "java util function Foo" but we want all the packages to be mashed
+      // together "java.util.function Foo"
+      else if (sym.isPackage) Ref.Global.ROOT.plus(pkgName(sym))
+      else if (sym == NoSymbol) Ref.Global.ROOT.plus("!invalid!")
+      else ref(sym.owner).plus(name)
+    }
+
+    private def pkgName (sym :Symbol) :String = {
+      val osym = sym.owner
+      if (osym.isRoot || osym.isEmptyPackageClass) sym.nameString
+      else s"${pkgName(osym)}.${sym.nameString}"
     }
 
     case class Pos (offset :Int, bstart :Int, bend :Int)
@@ -238,75 +249,52 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
     }
 
     private def emitSig (tree :Tree, writer :Writer) = {
-      // val buffer = new StringWriter()
-      // val printer = new SigTreePrinter(buffer)
-      // printer.print(tree)
+      val buffer = new StringWriter()
+      val printer = new SigTreePrinter(buffer)
+      printer.print(tree)
       // printer.flush()
-      // writer.emitSig(buffer.toString)
-      // printer.uses foreach { _.emit(writer) }
+      writer.emitSig(buffer.toString)
+      printer.uses foreach { _.emit(writer) }
     }
 
     case class SigUse (target :Ref.Global, name :String, kind :CKind, offset :Int) {
       def emit (writer :Writer) :Unit = writer.emitSigUse(target, name, kind, offset)
     }
 
-    // // used to generate signatures
-    // class SigTreePrinter (buf :StringWriter) extends global.CompactTreePrinter(new PrintWriter(buf)) {
+    // used to generate signatures
+    class SigTreePrinter (buf :StringWriter) extends global.CompactTreePrinter(new PrintWriter(buf)) {
 
-    //   val uses = ArrayBuffer[SigUse]()
+      val uses = ArrayBuffer[SigUse]()
 
-    //   override def printRaw (tree :Tree) {
-    //     tree match {
-    //       case PackageDef(packaged, stats) => {
-    //         printAnnotations(tree)
-    //         print("package "); print(packaged)
-    //       }
+      override def printTree (tree :Tree) = tree match {
 
-    //       case ValDef(mods, name, tp, rhs) => {
-    //         printAnnotations(tree)
-    //         printModifiers(tree, mods)
-    //         // print(if (mods.isMutable) "var " else "val ")
-    //         print(if (mods hasFlag Flags.MUTABLE) "var " else "val ")
-    //         print(symName(tree, name))
-    //         printOpt(": ", tp)
-    //       }
+        case cd @ ClassDef(mods, name, tparams, impl) =>
+          printAnnotations(cd)
+          printModifiers(tree, mods)
+          val word =
+            if (mods.isTrait) "trait"
+            else if (tree.symbol.isModuleClass) "object"
+            else "class"
+          print(word, " ", symName(tree, name))
+          printTypeParams(tparams)
+          // print(if (mods.isDeferred) " <: " else " extends ", impl)
 
-    //       case DefDef(mods, name, tparams, vparamss, tp, rhs) => {
-    //         printAnnotations(tree)
-    //         printModifiers(tree, mods)
-    //         print("def " + symName(tree, name))
-    //         printTypeParams(tparams)
-    //         vparamss foreach printValueParams
-    //         printOpt(": ", tp)
-    //       }
+        case _ => super.printTree(tree)
+      }
 
-    //       case Template(parents, self, body) => {
-    //         val currentOwner1 = currentOwner
-    //         if (tree.symbol != NoSymbol) currentOwner = tree.symbol.owner
-    //         printRow(parents, " with ")
-    //         currentOwner = currentOwner1
-    //       }
+      override protected def printPackageDef(tree: PackageDef, separator: String) = {
+        val PackageDef(packaged, stats) = tree
+        // printAnnotations(tree)
+        print("package ", packaged)// ; printColumn(stats, " {", separator, "}")
+      }
 
-    //       case tt: TypeTree => {
-    //         if ((tree.tpe eq null) || (settings.Xprintpos.value && tt.original != null)) {
-    //           if (tt.original != null) { print("<type: "); print(tt.original); print(">") }
-    //           else print("<type ?>")
-    //         } else if ((tree.tpe.typeSymbol ne null) && tree.tpe.typeSymbol.isAnonymousClass) {
-    //           System.out.println("TYPE1 " + tree.tpe) // TODO: print owner
-    //           print(tree.tpe.typeSymbol.toString())
-    //         } else {
-    //           val name = tree.tpe.toString
-    //           val target = tree.tpe.typeSymbol.toString // TODO: figure out real target
-    //           val kind = CKind.TYPE // kind={kindForSym(tree.sym)}
-    //           uses += SigUse(target, name, kind, _pos)
-    //           System.out.println("TYPE2 " + tree.tpe + "/" + tree.tpe.typeSymbol)
-    //           print(name)
-    //         }
-    //       }
+      override protected def printValDef(tree: ValDef, resultName: => String)(printTypeSignature: => Unit)(printRhs: => Unit) = {
+        super.printValDef(tree, resultName)(printTypeSignature)(())
+      }
 
-    //       case _ => super.printRaw(tree)
-    //     }
-    //   }
+      override protected def printDefDef(tree: DefDef, resultName: => String)(printTS: => Unit)(printRhs: => Unit) = {
+        super.printDefDef(tree, resultName)(printTS)(())
+      }
 
     //   override def printFlags (flags :Long, privateWithin :String) {
     //     import Flags._
@@ -314,12 +302,12 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
     //     super.printFlags(fflags, privateWithin)
     //   }
 
-    //   override def print (str :String) {
-    //     _pos += str.length
-    //     super.print(str)
-    //   }
+      // override def print (str :String) {
+      //   _pos += str.length
+      //   super.print(str)
+      // }
 
-    //   var _pos = 0
-    // }
+      var _pos = 0
+    }
   }
 }
