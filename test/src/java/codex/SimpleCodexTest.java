@@ -4,7 +4,7 @@
 
 package codex;
 
-import codex.extract.JavaExtractor;
+import codex.extract.*;
 import codex.model.*;
 import codex.store.*;
 import java.io.IOException;
@@ -27,7 +27,7 @@ import static org.junit.Assert.*;
 
 public class SimpleCodexTest {
 
-  public static List<Path> codexSources () throws IOException {
+  public static SourceSet codexSources () throws IOException {
     List<Path> sources = new ArrayList<>();
     Path root = Paths.get(System.getProperty("user.dir")).resolve("../core/src/java");
     if (Files.exists(root)) {
@@ -41,7 +41,7 @@ public class SimpleCodexTest {
         }
       });
     }
-    return sources;
+    return SourceSet.create(sources, sources.size());
   }
 
   public static MapDBStore createCodexStore () throws Exception {

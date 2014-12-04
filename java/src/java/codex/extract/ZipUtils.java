@@ -11,6 +11,7 @@ import com.sun.tools.javac.file.JavacFileManager;
 import com.sun.tools.javac.file.ZipArchive;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -35,8 +36,9 @@ public class ZipUtils {
     return (e -> e.getName().endsWith(suff));
   }
 
-  public static List<JavaFileObject> zipFiles (JavacTool javac, ZipFile file,
+  public static List<JavaFileObject> zipFiles (JavacTool javac, Path archive,
                                                Predicate<ZipEntry> filter) throws IOException {
+    ZipFile file = new ZipFile(archive.toFile());
     List<JavaFileObject> files = new ArrayList<>();
     JavacFileManager fm = javac.getStandardFileManager(null, null, null);
     ZipArchive arch = new ZipArchive(fm, file);
@@ -57,6 +59,7 @@ public class ZipUtils {
   // our file object is declared outside com.sun.tools.javac and wraps it in such a way that causes
   // it to choke when javac calls JavaFileManager.isSameFile (which it does when it encounters a
   // package-info.java file); yay for a twisty maze of bullshit
-  private static Constructor<?> zfoCtor = ZipArchive.ZipFileObject.class.getDeclaredConstructors()[0];
+  private static Constructor<?> zfoCtor =
+    ZipArchive.ZipFileObject.class.getDeclaredConstructors()[0];
   static  { zfoCtor.setAccessible(true); }
 }

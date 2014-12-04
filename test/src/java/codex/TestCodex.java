@@ -5,11 +5,13 @@
 package codex;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.zip.ZipFile;
 
 import codex.extract.JavaExtractor;
+import codex.extract.SourceSet;
 import codex.model.Def;
 import codex.model.Kind;
 import codex.model.Ref;
@@ -55,19 +57,20 @@ public class TestCodex {
     switch (what) {
     case "guava":
       {
-        String zip = System.getProperty("user.home") +
-          "/.m2/repository/com/google/guava/guava/16.0.1/guava-16.0.1-sources.jar";
-        extract.process(new ZipFile(zip), store.writer());
+        Path zip = Paths.get(System.getProperty("user.home") + "/.m2/repository/com/google/" +
+                             "guava/guava/16.0.1/guava-16.0.1-sources.jar");
+        extract.process(new SourceSet.Archive(zip), store.writer());
       } break;
 
     case "jdk":
       {
-        String zip = System.getProperty("java.home") + "/../src.zip";
-        extract.process(new ZipFile(zip), e -> e.getName().startsWith("java"), store.writer());
+        Path zip = Paths.get(System.getProperty("java.home") + "/../src.zip");
+        extract.process(new SourceSet.Archive(zip, e -> e.getName().startsWith("java")),
+                        store.writer());
       } break;
 
     default:
-      extract.process(new ZipFile(what), store.writer());
+      extract.process(new SourceSet.Archive(Paths.get(what)), store.writer());
       break;
     }
 

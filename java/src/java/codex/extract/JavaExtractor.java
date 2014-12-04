@@ -25,7 +25,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticListener;
 import javax.tools.JavaFileObject;
@@ -58,9 +57,15 @@ public class JavaExtractor implements Extractor {
   /** Provides the classpath used by the compiler. */
   public Iterable<Path> classpath () { return Collections.emptyList(); }
 
-  @Override public void process (Iterable<Path> files, Writer writer) {
-    StandardJavaFileManager fm = _compiler.getStandardFileManager(null, null, null); // TODO: args?
-    process0(fm.getJavaFileObjectsFromFiles(Iterables.transform(files, Path::toFile)), writer);
+  @Override public void process (SourceSet sources, Writer writer) throws IOException {
+    if (sources instanceof SourceSet.Files) {
+      Iterable<Path> files = ((SourceSet.Files)sources).paths;
+      StandardJavaFileManager fm = _compiler.getStandardFileManager(null, null, null); // TODO: args?
+      process0(fm.getJavaFileObjectsFromFiles(Iterables.transform(files, Path::toFile)), writer);
+    } else {
+      SourceSet.Archive sa = (SourceSet.Archive)sources;
+      process0(ZipUtils.zipFiles(_compiler, sa.archive, sa.filter), writer);
+    }
   }
 
   /** Combines {@code file} and {@code code} into a test file and processes it.
@@ -76,30 +81,6 @@ public class JavaExtractor implements Extractor {
     Iterator<String> citer = codes.iterator();
     for (String file : files) objs.add(mkTestObject(file, citer.next()));
     process0(objs, writer);
-  }
-
-  /** Processes all .java source files in {@code files}. Metadata is emitted to {@code writer}. */
-  public void process (ZipFile file, Writer writer) throws IOException {
-    process(file, e -> true, writer);
-  }
-
-  /** Processes all .java source files in {@code files}. Metadata is emitted to {@code writer}.
-    * @param filter a filter used to omit some entries from {@code file}.
-    */
-  public void process (ZipFile file, Predicate<ZipEntry> filter, Writer writer) throws IOException {
-    process0(ZipUtils.zipFiles(_compiler, file, filter), writer);
-  }
-
-  /** Enables the filtering of certain compunits from the extraction process. All compunits passed
-    * to {@code process} will be used to parse and analyze the code, but only compunits for which
-    * this method returns true will be extracted. The default is to extract all compunits.
-    *
-    * This mainly exists for processing the JDK sources, where there are a zillion files, which we
-    * want to include in the compilation process, but we only want to extract metadata for the
-    * public java.* and javax.* APIs.
-    */
-  protected boolean filter (JavaFileObject compunit) {
-    return true;
   }
 
   private void process0 (Iterable<? extends JavaFileObject> files, Writer writer) {
@@ -127,7 +108,7 @@ public class JavaExtractor implements Extractor {
         Context context = task.getContext();
         ExtractingScanner scanner = new ExtractingScanner(Types.instance(context), _omitBodies);
         for (CompilationUnitTree tree : asts) {
-          if (filter(tree.getSourceFile())) scanner.extract(tree, writer);
+          scanner.extract(tree, writer);
         }
       } finally {
         writer.closeSession();
