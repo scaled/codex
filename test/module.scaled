@@ -1,3 +1,4 @@
 depend: git:https://github.com/scaled/codex.git#core
 depend: git:https://github.com/scaled/codex.git#java
+depend: git:https://github.com/scaled/codex.git#scala
 depend: mvn:junit:junit:4.11

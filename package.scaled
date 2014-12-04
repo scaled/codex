@@ -4,8 +4,9 @@ version: 1.0
 descrip: A framework for grokking code.
  weburl: https://github.com/scaled/codex/
 license: New BSD
- module: core
- module: java
- module: test
  jcopts: -source 1.8 -target 1.8 -Xlint:all -Xlint:-serial
  scopts: -deprecation -feature -optimize
+ module: core
+ module: java
+ module: scala
+ module: test
