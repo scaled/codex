@@ -265,7 +265,7 @@ public class Utils {
     }
 
     private void addSigUse (Ref.Global target, String name, Kind kind, int offset) {
-      _writes = _writes.prepend(w -> w.emitSigUse(target, name, kind, offset));
+      _writes = _writes.prepend(w -> w.emitSigUse(target, kind, offset, name));
     }
   }
 }

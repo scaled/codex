@@ -34,22 +34,22 @@ public abstract class BatchWriter extends Writer {
   @Override public void emitSig (String text) {
     _curDef.sig = new SigInfo(text);
   }
-  @Override public void emitSigUse (Ref.Global target, String name, Kind kind, int offset) {
+  @Override public void emitSigUse (Ref.Global target, Kind kind, int offset, int length) {
     checkTarget(target, "emitSigUse");
-    _curDef.sig.addUse(new UseInfo(target, kind, offset, name.length()));
+    _curDef.sig.addUse(new UseInfo(target, kind, offset, length));
   }
 
   @Override public void emitDoc (int offset, int length) {
     _curDef.doc = new DocInfo(offset, length);
   }
-  @Override public void emitDocUse (Ref.Global target, String name, Kind kind, int offset) {
+  @Override public void emitDocUse (Ref.Global target, Kind kind, int offset, int length) {
     checkTarget(target, "emitDocUse");
-    _curDef.doc.addUse(new UseInfo(target, kind, offset, name.length()));
+    _curDef.doc.addUse(new UseInfo(target, kind, offset, length));
   }
 
-  @Override public void emitUse (Ref.Global target, String name, Kind kind, int offset) {
+  @Override public void emitUse (Ref.Global target, Kind kind, int offset, int length) {
     checkTarget(target, "emitUse");
-    _curDef.addUse(new UseInfo(target, kind, offset, name.length()));
+    _curDef.addUse(new UseInfo(target, kind, offset, length));
   }
 
   @Override public void emitRelation (Relation relation, Ref.Global target) {

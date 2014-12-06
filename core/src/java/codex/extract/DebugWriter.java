@@ -43,20 +43,23 @@ public class DebugWriter extends Writer {
   @Override public void emitSig (String text) {
     emit("sig", "text", text);
   }
-  @Override public void emitSigUse (Ref.Global target, String name, Kind kind, int offset) {
-    emit("siguse", "tgt", target, "name", name, "kind", kind, "off", offset);
+  @Override public void emitSigUse (Ref.Global target, Kind kind, int offset, int length) {
+    emit("siguse", "tgt", target, "kind", kind, "off", offset, "len", length);
   }
 
   @Override public void emitDoc (int offset, int length) {
     emit("doc", "off", offset, "len", length);
   }
-  @Override public void emitDocUse (Ref.Global target, String name, Kind kind, int offset) {
-    emit("docuse", "tgt", target, "name", name, "kind", kind, "off", offset);
+  @Override public void emitDocUse (Ref.Global target, Kind kind, int offset, int length) {
+    emit("docuse", "tgt", target, "kind", kind, "off", offset, "len", length);
   }
 
-  @Override public void emitUse (Ref.Global target, String name, Kind kind, int offset) {
-    emit("use", "tgt", target, "name", name, "kind", kind, "off", offset);
+  @Override public void emitUse (Ref.Global target, Kind kind, int offset, String name) {
+    emit("use", "tgt", target, "kind", kind, "off", offset, "name", name);
     checkName("use", offset, name);
+  }
+  @Override public void emitUse (Ref.Global target, Kind kind, int offset, int length) {
+    emit("use", "tgt", target, "kind", kind, "off", offset, "len", length);
   }
 
   @Override public void closeDef () {
@@ -76,6 +79,7 @@ public class DebugWriter extends Writer {
     if (!actual.equals(name)) {
       System.out.println("!!invalid name in " + whence +
                          " [name=" + name + ", offset=" + offset + ", actual=" + actual + "]");
+      System.out.println(_source);
     }
   }
 

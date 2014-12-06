@@ -67,7 +67,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
                      // TODO: this bodystart/end is kind of bogus
                      _text.indexOf(pname, unit.pos), 0, _text.length());
       writer.emitSig(pkgpre + pname);
-      writer.emitSigUse(_id, pname, Kind.MODULE, pkgpre.length());
+      writer.emitSigUse(_id, Kind.MODULE, pkgpre.length(), pname);
 
       // now we need a special hacky def to "owned" the imports in this compilation unit; we can't
       // allow those to be owned by the package module def, because that gets redefined by every
@@ -81,7 +81,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       writer.openDef(_id, pname, Kind.SYNTHETIC, Flavor.NONE, false, Access.LOCAL,
                      _text.indexOf(pname, unit.pos), 0, _text.length());
       writer.emitSig(pkgpre + pname + " (" + fname + ")");
-      writer.emitSigUse(_id, pname, Kind.MODULE, pkgpre.length());
+      writer.emitSigUse(_id, Kind.MODULE, pkgpre.length(), pname);
 
       _needCloseUnitDef = true;
       super.visitCompilationUnit(node, writer);
@@ -355,8 +355,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       else tsym = csym;
     } else tsym = tree.sym;
 
-    writer.emitUse(targetForSym(tree.name, tsym), tree.name.toString(), kindForSym(tree.sym),
-                   tree.getStartPosition());
+    writer.emitUse(targetForSym(tree.name, tsym), kindForSym(tree.sym), tree.getStartPosition(),
+                   tree.name.toString());
     return null;
   }
 
@@ -372,7 +372,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
         System.out.printf("Unable to find use in member select %s (%s @ %d / %d %s)\n",
                           tree, name, selpos, tree.getStartPosition(), tree.selected.toString());
       }
-      else writer.emitUse(targetForSym(name, tree.sym), name, kindForSym(tree.sym), offset);
+      else writer.emitUse(targetForSym(name, tree.sym), kindForSym(tree.sym), offset, name);
     }
     return null;
   }
@@ -499,7 +499,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
             Ref.Global tid = targetForSym(target, tsym);
             Kind tkind = kindForSym(tsym);
             int start = btm.start(2);
-            uses = uses.prepend(w -> w.emitDocUse(tid, target, tkind, start));
+            uses = uses.prepend(w -> w.emitDocUse(tid, tkind, start, target));
           }
           break;
         // TODO: case "value":
