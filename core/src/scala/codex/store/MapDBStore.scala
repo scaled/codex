@@ -457,7 +457,8 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     val uses = new ArrayList[Use](puses.size)
     puses foreach { use =>
       val name = _names.get(use.nameId)
-      uses.add(new Use(nameToRef(use.nameId, name), name.kind, use.offset, use.length))
+      if (name == null) println(s"No name for $use!")
+      else uses.add(new Use(nameToRef(use.nameId, name), name.kind, use.offset, use.length))
     }
     uses
   }
