@@ -36,6 +36,7 @@ abstract class ScalaExtractor extends Extractor {
   private def process0 (sources :List[SourceFile], writer :Writer) {
     val settings = new Settings
     settings.classpath.value = ClassPath.join(classpath.map(_.toString).toSeq :_*)
+    settings.Yrangepos.value = true
     // save class files to a virtual directory in memory (TODO: how to disable class gen?)
     settings.outputDirs.setSingleOutput(new VirtualDirectory("(memory)", None))
 
