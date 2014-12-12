@@ -4,6 +4,9 @@
 
 package codex.model;
 
+import com.google.common.collect.ImmutableSet;
+import java.util.Set;
+
 /**
  * Models the operations and metadata specific to the programming languages supported by Codex. It's
  * a bit centralized to require that all languages be enumerated here, but it simplifies things
@@ -23,10 +26,22 @@ public enum Lang {
         case VALUE: return " ";
       }
     }
+
+    @Override public boolean isRoot (Def def) {
+      if (!def.name.equals("Object")) return false;
+      Def odef = def.outer();
+      return (odef != null) && odef.name.equals("java.lang");
+    }
   },
 
   /** http://www.scala-lang.org/ */
-  SCALA,
+  SCALA {
+    @Override public boolean isRoot (Def def) {
+      if (!SCALA_ROOTS.contains(def.name)) return false;
+      Def odef = def.outer();
+      return (odef != null) && odef.name.equals("scala");
+    }
+  },
 
   /** http://www.w3.org/XML/ */
   XML,
@@ -55,4 +70,14 @@ public enum Lang {
   public String pathPrefix (Kind kind) {
     return ".";
   }
+
+  /**
+   * Returns true if {@code def} is a root type in this language's type hierarchy. For example
+   * {@code Object} in Java.
+   */
+  public boolean isRoot (Def def) {
+    return false;
+  }
+
+  private static Set<String> SCALA_ROOTS = ImmutableSet.of("Any", "AnyRef", "AnyVal");
 }
