@@ -4,81 +4,98 @@
 
 package codex.extract;
 
-import codex.extract.TextWriter;
-import com.google.common.base.Joiner;
+import codex.extract.DebugWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import org.junit.*;
+import scaled.Seq;
 import static org.junit.Assert.*;
 
 public class JavaExtractorTest {
 
-  public final String TESTA = Joiner.on("\n").join(
-    "package foo.bar;",
-    "public class TestA {",
-    "    public static class A {",
-    "        public int value;",
-    "    }",
-    "    public static class B {",
-    "        public void noop () {",
-    "        }",
-    "    }",
-    "    public static void main (String[] args) {",
-    "        int av = new A().value;",
-    "        B b = new B();",
-    "        b.noop();",
-    "    }",
-    "}");
+  private String testExtract (String file, String... code) {
+    JavaExtractor ex = new JavaExtractor();
+    StringWriter out = new StringWriter();
+    String src = Seq.from(code).mkString("\n");
+    ex.process(file, src, new DebugWriter(new PrintWriter(out), src));
+    return out.toString();
+  }
 
   @Test public void testBasics () {
-    JavaExtractor ex = new JavaExtractor();
-    StringWriter out = new StringWriter();
-    ex.process("TestA.java", TESTA, new TextWriter(new PrintWriter(out)));
-    // System.out.println(out.toString());
+    String out = testExtract(
+      "TestA.java",
+      "package foo.bar;",
+      "public class TestA {",
+      "    public static class A {",
+      "        public int value;",
+      "    }",
+      "    public static class B {",
+      "        public void noop () {",
+      "        }",
+      "    }",
+      "    public static void main (String[] args) {",
+      "        int av = new A().value;",
+      "        B b = new B();",
+      "        b.noop();",
+      "    }",
+      "}");
+    // System.out.println(out);
   }
-
-  public final String TESTLAM = Joiner.on("\n").join(
-    "public class TestLam {",
-    "    public static interface Fn {",
-    "        int apply (String value);",
-    "    }",
-    "    public static void apply (Fn fn) {}",
-    "    public static void main (String[] args) {",
-    "        apply(v -> v.length());",
-    "        apply((String q) -> q.length());",
-    "    }",
-    "}");
 
   @Test public void testLambdaParams () {
-    JavaExtractor ex = new JavaExtractor();
-    StringWriter out = new StringWriter();
-    ex.process("TestLam.java", TESTLAM, new TextWriter(new PrintWriter(out)));
-    // System.out.println(out.toString());
+    String out = testExtract(
+      "TestLam.java",
+      "public class TestLam {",
+      "    public static interface Fn {",
+      "        int apply (String value);",
+      "    }",
+      "    public static void apply (Fn fn) {}",
+      "    public static void main (String[] args) {",
+      "        apply(v -> v.length());",
+      "        apply((String q) -> q.length());",
+      "    }",
+      "}");
+    // System.out.println(out);
   }
 
-  public final String TEST_OVERRIDES = Joiner.on("\n").join(
-    "package foo.bar;",
-    "public class TestOverrides {",
-    "    public interface A {",
-    "        public int foo ();",
-    "    }",
-    "    public static class B {",
-    "        public int foo () { return 0; }",
-    "    }",
-    "    public static class C extends B implements A {",
-    "        @Override public int foo () { return 1; }",
-    "    }",
-    "}");
-
   @Test public void testOverrides () {
-    JavaExtractor ex = new JavaExtractor();
-    StringWriter out = new StringWriter();
-    ex.process("TestOverrides.java", TEST_OVERRIDES, new TextWriter(new PrintWriter(out)));
-    String dump = out.toString();
+    String out = testExtract(
+      "TestOverrides.java",
+      "package foo.bar;",
+      "public class TestOverrides {",
+      "    public interface A {",
+      "        public int foo ();",
+      "    }",
+      "    public static class B {",
+      "        public int foo () { return 0; }",
+      "    }",
+      "    public static class C extends B implements A {",
+      "        @Override public int foo () { return 1; }",
+      "    }",
+      "}");
     // C.foo() should override both A.foo() and B.foo()
     assertTrue("C.foo overrides A.foo",
-               dump.contains("relation OVERRIDES foo.bar TestOverrides A foo()int"));
+               out.contains("rel {type=OVERRIDES, tgt=foo.bar TestOverrides A foo()int}"));
     assertTrue("C.foo overrides B.foo",
-               dump.contains("relation OVERRIDES foo.bar TestOverrides B foo()int"));
+               out.contains("rel {type=OVERRIDES, tgt=foo.bar TestOverrides B foo()int}"));
+  }
+
+  @Test public void testAnonCtor () {
+    String out = testExtract(
+      "TestAnonCtor.java",
+      "package foo.bar;",
+      "public class TestAnonCtor {",
+      "    public Runnable foo = new Runnable() {", // super ctor is Object
+      "        public void run () {}",
+      "    };",
+      "    public Thread foo = new Thread() {", // super ctor is real class
+      "        public void run () {}",
+      "    };",
+      "}");
+    // System.out.println(out);
+    assertTrue("new Runnable() {} refs Object()",
+               out.contains("use {tgt=java.lang Object Object()void, kind=FUNC"));
+    assertTrue("new Thread() {} refs Thread()",
+               out.contains("use {tgt=java.lang Thread Thread()void, kind=FUNC"));
   }
 }

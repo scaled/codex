@@ -51,7 +51,14 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     _unit = unit;
     try {
       if (unit.packge == null) {
-        System.err.println("Null package? " + unit); // TODO
+        warn("Null package? " + unit); // TODO
+        return null;
+      }
+
+      // if there is no package directive, just let the classes be the top-level members; this won't
+      // happen much "in the field"
+      if (unit.packge.isUnnamed()) {
+        super.visitCompilationUnit(node, writer);
         return null;
       }
 
@@ -109,14 +116,15 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     _symtab.push(new HashMap<>());
     JCClassDecl tree = (JCClassDecl)node;
     _class.push(tree);
-    String name = tree.name.toString();
-    boolean isAnon = name == "";
-    String clid = name + (isAnon ? ("$" + nextanon()) : "");
 
-    String cname;
-    if (!isAnon) cname = clid;
-    else if (tree.extending != null) cname = tree.extending.toString();
-    else cname = tree.implementing.toString();
+    String cid, cname;
+    if (!tree.name.isEmpty()) cid = cname = tree.name.toString();
+    else {
+      // TODO: really we should use the enclosing class name here
+      JCExpression anonName = (tree.extending == null) ? tree.implementing.head : tree.extending;
+      cid = anonName + "$" + nextanon();
+      cname = ""; // TODO: do I really want the def name to be empty? I think so, but...
+    }
 
     Flavor flavor;
     if (hasFlag(tree.mods, Flags.ANNOTATION)) flavor = Flavor.ANNOTATION;
@@ -128,14 +136,15 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     // TODO: improve approach to finding position of class name
     int treeStart = tree.getStartPosition();
     int start = _text.indexOf(cname, treeStart);
+    if (start == -1) start = treeStart; // TODO
 
     int ocount = _anoncount;
     _anoncount = 0;
-    _id = _id.plus(clid);
+    _id = _id.plus(cid);
 
     // we allow the name to be "" for anonymous classes so that they can be properly filtered
     // in the user interface; we eventually probably want to be more explicit about this
-    writer.openDef(_id, name, Kind.TYPE, flavor, isExp(tree.mods.flags), toAccess(tree.mods.flags),
+    writer.openDef(_id, cname, Kind.TYPE, flavor, isExp(tree.mods.flags), toAccess(tree.mods.flags),
                    start, treeStart, tree.getEndPosition(_unit.endPositions));
 
     // emit supertype relations
@@ -155,13 +164,13 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
     // name in anon classes is "", but for signature generation we want to replace it with the
     // name that will be later assigned by the compiler EnclosingClass$N
-    new SigPrinter(_id, tree.name.table.fromString(clid)) {
+    new SigPrinter(_id, tree.name.table.fromString(cname)) {
       @Override public void printAnnotations (List<JCAnnotation> trees) {
         super.printAnnotations(trees);
         try {
           if (!trees.isEmpty()) println();
         } catch (IOException ioe) {
-          ioe.printStackTrace(System.err);
+          warn("SigPrinter println() choked", ioe);
         }
       }
     }.emit(tree, writer);
@@ -326,13 +335,13 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   @Override public Void visitIdentifier (IdentifierTree node, Writer writer) {
     JCIdent tree = (JCIdent)node;
     if (_class.peek() == null || // make sure we're not looking at an import
-        tree.sym == null || inAnonExtendsOrImplements() ||
-        hasFlag(tree.sym.flags(), Flags.SYNTHETIC) || isSynthSuper(tree)) return null;
+        tree.sym == null || hasFlag(tree.sym.flags(), Flags.SYNTHETIC) ||
+        inAnonExtendsOrImplements() || isSynthSuper(tree)) return null;
 
     // if this identifier is the "C" part of a "new C" expression, we want to climb up the AST
     // and get the constructor from our parent tree node
-    Tree pnode = getCurrentPath().getParentPath().getLeaf();
     Symbol tsym;
+    Tree pnode = getCurrentPath().getParentPath().getLeaf();
     if (pnode.getKind() == Tree.Kind.NEW_CLASS) {
       JCNewClass ptree = (JCNewClass)pnode;
       Symbol csym = ptree.constructor;
@@ -343,19 +352,29 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       // have been resolved either, but we'll cope with that later)
       else if (csym == null) tsym = tree.sym;
       // if this is an anonymous class constructor...
-      else if (csym.owner.name == csym.owner.name.table.names.empty) {
-        // TODO: if the parent type is an interface, there will be no constructor (and it
-        // would be weird to link to the zero-argument Object constructor), but if the type
-        // is a class, it would be nice to link to the appropriate constructor
-        // val ptype = _types.supertype(csym.owner.`type`)
-        // TODO: if supertype is not Object, find and use super ctor
-        tsym = tree.sym; // for now, target the type itself
+      else if (csym.owner.name.isEmpty()) {
+        // we are a little sneaky here, we dig down into the anonymous class JClassDecl AST, look at
+        // the synthesized ctor AST, then find the super() call therein, and resolve the target of
+        // that; this allows us to avoid actually resolving the super ctor which javac already did
+        // and which is complicated
+        try {
+          JCMethodDecl ctor = (JCMethodDecl)ptree.getClassBody().defs.head;
+          JCExpressionStatement stmt = (JCExpressionStatement)ctor.body.stats.head;
+          JCMethodInvocation supinv = (JCMethodInvocation)stmt.expr;
+          JCIdent supid = (JCIdent)supinv.meth;
+          tsym = supid.sym;
+        } catch (Exception e) {
+          // maybe the AST changed, so complain
+          warn("Choked trying to extract anon-class super ctor [tree=" + ptree + "]: " + e);
+          tsym = tree.sym; // and fall back to reffing the anon supertype
+        }
       }
       // otherwise all is well, so use the constructor symbol as our target
       else tsym = csym;
-    } else tsym = tree.sym;
+    }
+    else tsym = tree.sym;
 
-    writer.emitUse(targetForSym(tree.name, tsym), kindForSym(tree.sym), tree.getStartPosition(),
+    writer.emitUse(targetForSym(tree.name, tsym), kindForSym(tsym), tree.getStartPosition(),
                    tree.name.toString());
     return null;
   }
@@ -369,8 +388,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       int offset = _text.indexOf(name, selpos);
       // TODO: I think this is still happening in some circumstances...
       if (offset == -1) {
-        System.out.printf("Unable to find use in member select %s (%s @ %d / %d %s)\n",
-                          tree, name, selpos, tree.getStartPosition(), tree.selected.toString());
+        warn(String.format("Unable to find use in member select %s (%s @ %d / %d %s)\n",
+                           tree, name, selpos, tree.getStartPosition(), tree.selected.toString()));
       }
       else writer.emitUse(targetForSym(name, tree.sym), kindForSym(tree.sym), offset, name);
     }
@@ -383,7 +402,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     * which will result in a second use for the anonymous supertype, which we want to suppress. */
   private boolean inAnonExtendsOrImplements () {
     Tree tree = getCurrentPath().getParentPath().getLeaf();
-    return (tree instanceof JCClassDecl) && (((JCClassDecl)tree).name.toString() == "");
+    return (tree instanceof JCClassDecl) && (((JCClassDecl)tree).name.isEmpty());
   }
 
   // the only way to identify a synthesized super() seems to be to check that its source position
@@ -425,7 +444,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
           Ref.Global id = symtab.get(vs);
           if (id != null) return id;
         }
-        System.err.println("targetForSym: unhandled varsym kind: " + vs.getKind());
+        warn("targetForSym: unhandled varsym kind: " + vs.getKind());
         return Ref.Global.ROOT.plus("unknown");
       }
     } else return targetForTypeSym(sym);
@@ -467,7 +486,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       try {
         parseDoc(text);
       } catch (Exception e) {
-        e.printStackTrace(System.err);
+        warn("parseDoc choked", e);
       }
     }
 
@@ -574,8 +593,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
         }
       }
     } catch (Exception e) {
-      System.err.println("Error finding doc at " + pos + " in " + _unit.sourcefile + ":");
-      e.printStackTrace(System.err);
+      warn("Error finding doc at " + pos + " in " + _unit.sourcefile + ":", e);
       return NO_DOC;
     }
   }
@@ -594,6 +612,14 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   private Symbol lookup (Scope scope, Name name) {
     Scope.Entry e = scope.lookup(name);
     return (e.scope == null) ? null : e.sym;
+  }
+
+  private void warn (String msg) {
+    System.err.println(msg); // TODO: something better?
+  }
+  private void warn (String msg, Throwable cause) {
+    System.err.println(msg); // TODO: something better?
+    cause.printStackTrace(System.err);
   }
 
   // TODO: this may need to be a full parser since it may match braces inside an @code block
