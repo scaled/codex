@@ -74,8 +74,8 @@ public class DebugWriter extends Writer {
 
   private void checkName (String whence, int offset, String name) {
     int end = offset+name.length();
-    String actual = (end > _source.length()) ?
-      ("<overflow:" + end + ">") : _source.substring(offset, end);
+    String actual = (offset < 0) ? ("<underflow: " + offset + ">") :
+      ((end > _source.length()) ? ("<overflow:" + end + ">") : _source.substring(offset, end));
     if (!actual.equals(name)) {
       System.out.println("!!invalid name in " + whence +
                          " [name=" + name + ", offset=" + offset + ", actual=" + actual + "]");
