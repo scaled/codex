@@ -11,7 +11,8 @@ import java.io.{File, IOException}
 import java.nio.file.{Files, Path, Paths}
 import java.util.concurrent.atomic.AtomicLong
 import java.util.stream.Collectors
-import java.util.{Arrays, ArrayList, Collections, List => JList, HashMap, HashSet, Optional}
+import java.util.{Arrays, ArrayList, Collection, Collections, List => JList}
+import java.util.{HashMap, HashSet, Optional}
 import org.mapdb.{BTreeKeySerializer, BTreeMap, Bind, DB, DBMaker, Fun, Serializer}
 import scala.collection.mutable.{Builder, Map => MMap, Set => MSet}
 import scaled._
@@ -271,7 +272,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     _db.close()
   }
 
-  override def topLevelDefs = _topDefs map _defs.get
+  override def topLevelDefs = toDefs("topLevelDefs", _topDefs)
 
   override def lastIndexed (source :Source) =
     Option(_srcToId.get(source.toString)).map(_srcInfo.get).map(_.indexed) getOrElse 0L
@@ -279,7 +280,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
   override def sourceDefs (source :Source) = {
     val unitId = _srcToId.get(source.toString())
     if (unitId == null) throw new IllegalArgumentException("Unknown source " + source)
-    _srcDefs.get(unitId) map _defs.get
+    toDefs("sourceDefs", _srcDefs.get(unitId))
   }
 
   override def `def` (defId :Id) = reqdef(defId, _defs.get(defId))
@@ -289,7 +290,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
   }
   override def ref (defId :Id) = globalRef(toNameId(defId))
 
-  override def defsIn (defId :Id) = _defMems.getOrDefault(defId, NoIds) map _defs.get
+  override def defsIn (defId :Id) = toDefs("defsIn", _defMems.getOrDefault(defId, NoIds))
 
   override def usesIn (defId :Id) = resolveUses(defUses(defId))
   private def defUses (defId :Id) = _defUses.getOrDefault(defId, Seq())
@@ -410,6 +411,15 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     else Ref.local(this, toDefId(nameId, name.unitId))
 
   private def lookupName (ref :Ref.Global) :Id = _fqNames.get(ref.toString)
+
+  private def toDefs (where :String, ids :Collection[Id]) :Seq[Def] = {
+    val defs = Seq.builder[Def](ids.size)
+    val iter = ids.iterator() ; while (iter.hasNext) _defs.get(iter.next) match {
+      case null => println("Missing def [in=$where, id=$id]")
+      case df   => defs += df
+    }
+    defs.build()
+  }
 
   private def addName (ref :Ref.Global, kind :Kind, unitId :Int) :Id = {
     val parentId = if (ref.parent == Ref.Global.ROOT) ZeroId
