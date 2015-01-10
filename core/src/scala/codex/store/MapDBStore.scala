@@ -414,9 +414,12 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
 
   private def toDefs (where :String, ids :Collection[Id]) :Seq[Def] = {
     val defs = Seq.builder[Def](ids.size)
-    val iter = ids.iterator() ; while (iter.hasNext) _defs.get(iter.next) match {
-      case null => println("Missing def [in=$where, id=$id]")
-      case df   => defs += df
+    val iter = ids.iterator() ; while (iter.hasNext) {
+      val id = iter.next
+      _defs.get(id) match {
+        case null => println(s"Missing def [in=$where, id=$id]")
+        case df   => defs += df
+      }
     }
     defs.build()
   }
