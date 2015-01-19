@@ -486,7 +486,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
       // files, so the fact that one source file no longer defines it does not mean it is no longer
       // in use; so put it back; I don't have any good ideas on how to avoid leaking module defs
       // without making def removal way more expensive, so I'm going to punt; do a full reindex!
-      if (df.kind == Kind.MODULE) _defs.put(defId, df)
+      if (df != null && df.kind == Kind.MODULE) _defs.put(defId, df)
       else {
         // remove the def from the myriad def maps
         _topDefs.remove(defId)
