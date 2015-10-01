@@ -129,7 +129,7 @@ public class JavaExtractor implements Extractor {
         if (sb.length() > 0) sb.append(", ");
         sb.append(kind.toString().toLowerCase()).append('=').append(count);
       }
-      if (sb.length() > 0) System.err.println("Diagnostics [" + sb + "]");
+      if (sb.length() > 0) System.out.println("Diagnostics [" + sb + "]");
 
     } catch (Exception e) {
       throw new RuntimeException(e);
