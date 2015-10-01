@@ -291,7 +291,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     String name = tree.name.toString();
     _id = _id.plus(name);
 
-    int varend = tree.vartype.getEndPosition(_unit.endPositions);
+    int varend = (tree.vartype == null) ? 0 : tree.vartype.getEndPosition(_unit.endPositions);
     int start = _text.indexOf(name, varend);
     int treeStart = tree.getStartPosition();
     int bodyStart = (treeStart == -1) ? start : treeStart;
