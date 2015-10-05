@@ -15,7 +15,7 @@ class ScalaExtractorTest {
 
   // locate the scala-library.jar
   val scalalib = {
-    val loader = getClass.getClassLoader.asInstanceOf[URLClassLoader]
+    val loader = classOf[Seq[_]].getClassLoader.asInstanceOf[URLClassLoader]
     val entries = loader.getURLs.toSeq.map(url => Paths.get(url.toURI))
     entries find(_.getFileName.toString.contains("scala-library")) getOrElse {
       throw new AssertionError("No scala-library.jar on test classpath? " + entries)
