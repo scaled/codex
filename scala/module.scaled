@@ -1,3 +1,3 @@
 depend: git:https://github.com/scaled/codex.git#core
 # depend: sys:jdk:tools:1.8.0
-depend: mvn:org.scala-lang:scala-compiler:2.11.7
+depend: mvn:org.scala-lang:scala-compiler:2.12.0-M3
