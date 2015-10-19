@@ -6,9 +6,11 @@ package codex.extract
 
 import java.lang.{Iterable => JIterable}
 import java.nio.file.Path
+import java.util.zip.ZipFile
+import scala.collection.mutable.ArrayBuffer
 import scala.reflect.internal.Positions
 import scala.reflect.internal.util.{BatchSourceFile, SourceFile}
-import scala.reflect.io.{AbstractFile, VirtualDirectory}
+import scala.reflect.io.{AbstractFile, VirtualDirectory, VirtualFile, ZipArchive}
 import scala.tools.nsc.reporters.ConsoleReporter
 import scala.tools.nsc.util.ClassPath
 import scala.tools.nsc.{Global, Settings}
@@ -22,7 +24,8 @@ abstract class ScalaExtractor extends Extractor {
   override def process (sources :SourceSet, writer :Writer) = sources match {
     case sf :SourceSet.Files => process0(
       sf.paths.toList.map(f => new BatchSourceFile(AbstractFile.getFile(f.toFile))), writer)
-    case sa :SourceSet.Archive => // TODO
+    case sa :SourceSet.Archive =>
+      process0(zipToVirtualFiles(sa).map(new BatchSourceFile(_)).toList, writer)
   }
 
   /** Processes the test `file` `(name, code)`. Metadata is emitted to `writer`. */
@@ -53,5 +56,21 @@ abstract class ScalaExtractor extends Extractor {
     finally {
       writer.closeSession()
     }
+  }
+
+  private def zipToVirtualFiles (sa :SourceSet.Archive) :Seq[VirtualFile] = {
+    val archive = new ZipFile(sa.archive.toFile)
+    val files = ArrayBuffer[VirtualFile]()
+    val enum = archive.entries ; while (enum.hasMoreElements) {
+      val entry = enum.nextElement
+      if (sa.filter.test(entry) && entry.getName.endsWith(".scala")) {
+        files += new VirtualFile(entry.getName, entry.getName) {
+          override def lastModified = entry.getTime
+          override def input        = archive getInputStream entry
+          override def sizeOption   = Some(entry.getSize.toInt)
+        }
+      }
+    }
+    files
   }
 }
