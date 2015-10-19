@@ -16,22 +16,23 @@ import codex.TestScalaCodex
 class ScalaExtractorTest {
   def extractor = TestScalaCodex.extractor(true)
 
-  // @Test def testBasics () {
-  //   println(process("TestA.scala", Seq(
-  //     "package pants",
-  //     "object TestA {",
-  //     "  class Inner {",
-  //     "    val foo = 5",
-  //     "    def bar (baz :Int) :Int = {",
-  //     "      val bing = baz + 3",
-  //     "      bing",
-  //     "    }",
-  //     "    def qux (s :String, c :Int) :Seq[String] = {",
-  //     "      Seq(s)",
-  //     "    }",
-  //     "  }",
-  //     "}")))
-  // }
+  @Test def testBasics () {
+    println(process("TestA.scala", Seq(
+      "package pants",
+      "package bottoms.cuffs",
+      "object TestA {",
+      "  class Inner {",
+      "    val foo = 5",
+      "    def bar (baz :Int) :Int = {",
+      "      val bing = baz + 3",
+      "      bing",
+      "    }",
+      "    def qux (s :String, c :Int) :Seq[String] = {",
+      "      Seq(s)",
+      "    }",
+      "  }",
+      "}")))
+  }
 
   // @Test def testRefinement () {
   //   println(process("Refinement.scala", Seq(

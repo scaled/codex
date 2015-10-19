@@ -71,7 +71,15 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
 
     override def traverse (tree :Tree) :Unit = tree match {
       case t @ PackageDef(pid, stats) => {
-        val pname = pkgName(t.symbol)
+        // if this package def is of the form foo.bar.baz we have to insert separate ids for
+        // 'foo', 'bar' and then withTree('baz', ...), and then remove our extra ids after
+        val prePkgId = _id
+        def addPkgIds (tree :Tree) :Unit = tree match {
+          case rt :RefTree => addPkgIds(rt.qualifier) ; _id = _id.plus(rt.name.toString)
+          case _ => // done!
+        }
+        addPkgIds(pid.qualifier)
+        val pname = pid.name.toString
         withTree(pname, t) {
           openDef(pname, CKind.MODULE, Flavor.PACKAGE, true, Access.PUBLIC)
           emitSig(tree, writer)
@@ -79,29 +87,31 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
           // writer.emitSigUse(_id, pname, Kind.MODULE, pkgpre.length());
 
           // now we need a special hacky def to "owned" the imports in this compilation unit; we
-          // allocan't allow those to be owned by the package module def, because that gets
-          // redefined alloby every compilation unit and only one unit would get its import uses
-          // into the allodatabase which breaks things like find-all-uses
+          // can't allow those to be owned by the package module def, because that gets redefined
+          // by every compilation unit and only one unit would get its import uses into the
+          // database which breaks things like find-all-uses
 
-      // // determine the (simple) name of this compilation unit
-      // String fpath = unit.getSourceFile().toUri().toString();
-      // String fname = fpath.substring(fpath.lastIndexOf('/')+1);
-      // _id = _id.plus(fname);
-      // writer.openDef(_id, pname, Kind.SYNTHETIC, Flavor.NONE, false, Access.LOCAL,
-      //                _text.indexOf(pname, unit.pos), 0, _text.length());
-      // writer.emitSig(pkgpre + pname + " (" + fname + ")");
-      // writer.emitSigUse(_id, pname, Kind.MODULE, pkgpre.length());
+          // TODO: what we just said above
+          // // determine the (simple) name of this compilation unit
+          // String fpath = unit.getSourceFile().toUri().toString();
+          // String fname = fpath.substring(fpath.lastIndexOf('/')+1);
+          // _id = _id.plus(fname);
+          // writer.openDef(_id, pname, Kind.SYNTHETIC, Flavor.NONE, false, Access.LOCAL,
+          //                _text.indexOf(pname, unit.pos), 0, _text.length());
+          // writer.emitSig(pkgpre + pname + " (" + fname + ")");
+          // writer.emitSigUse(_id, pname, Kind.MODULE, pkgpre.length());
 
-      // _needCloseUnitDef = true;
-      // super.visitCompilationUnit(node, writer);
-      // // if we haven't closed our comp unit def, we need to do so now
-      // if (_needCloseUnitDef) writer.closeDef();
+          // _needCloseUnitDef = true;
+          // super.visitCompilationUnit(node, writer);
+          // // if we haven't closed our comp unit def, we need to do so now
+          // if (_needCloseUnitDef) writer.closeDef();
 
           // we don't do super.traverse here because we don't want to traverse the package ident
           // which would result in a use being emitted
           traverseStats(stats, t.symbol)
           writer.closeDef()
         }
+        _id = prePkgId
       }
 
       case t @ ClassDef(mods, name, tparams, impl) => {
@@ -130,7 +140,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
 
       case t @ ModuleDef(mods, name, impl) => {
         val mname = name.toString
-        withTree(mname, t) {
+        withTree(mname+"$", t) {
           val flavor = Flavor.OBJECT // TODO
           val isExp = true // TODO
           debug(s"ModuleDef($mname) ${_curpos}")
@@ -309,25 +319,24 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
     }
 
     private def nameFromSym (sym :Symbol) :String = {
-      def isMethNArgs (sym :Symbol) =
-        sym.isMethod && !sym.asInstanceOf[MethodSymbolApi].paramLists.isEmpty
-      sym.nameString + (if (isMethNArgs(sym)) trimArgs(sym.tpe.toString) else "")
+      sym.nameString + (sym match {
+        case msym :MethodSymbol => if (!msym.paramLists.isEmpty) trimArgs(sym.tpe.toString) else ""
+        case tsym :TypeSymbol   => if (sym.isModule) "$" else ""
+        case _                  => ""
+      })
     }
 
     private def ref (sym :Symbol) :Ref.Global = {
       if (sym.isRoot || sym.isEmptyPackageClass) Ref.Global.ROOT
-      // TODO: coalesce all packages above this one; Scala treats each package in the path as a
-      // separate symbol "java util function Foo" but we want all the packages to be mashed
-      // together "java.util.function Foo"
-      else if (sym.hasPackageFlag) Ref.Global.ROOT.plus(pkgName(sym))
+      else if (sym.hasPackageFlag) pkgRef(sym, Ref.Global.ROOT)
       else if (sym == NoSymbol) Ref.Global.ROOT.plus("!invalid!")
       else ref(sym.owner).plus(nameFromSym(sym))
     }
 
-    private def pkgName (sym :Symbol) :String = {
+    private def pkgRef (sym :Symbol, pref :Ref.Global) :Ref.Global = {
       val osym = sym.owner
-      if (osym.isRoot || osym.isEmptyPackageClass) sym.nameString
-      else s"${pkgName(osym)}.${sym.nameString}"
+      (if (osym.isRoot || osym.isEmptyPackageClass) pref
+       else pkgRef(osym, pref)).plus(sym.nameString)
     }
 
     case class Pos (offset :Int, start :Int, end :Int)
