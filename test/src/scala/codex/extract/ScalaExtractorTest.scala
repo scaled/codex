@@ -11,20 +11,10 @@ import java.nio.file.Paths
 import org.junit.Assert._
 import org.junit._
 
+import codex.TestScalaCodex
+
 class ScalaExtractorTest {
-
-  // locate the scala-library.jar
-  val scalalib = {
-    val loader = classOf[Seq[_]].getClassLoader.asInstanceOf[URLClassLoader]
-    val entries = loader.getURLs.toSeq.map(url => Paths.get(url.toURI))
-    entries find(_.getFileName.toString.contains("scala-library")) getOrElse {
-      throw new AssertionError("No scala-library.jar on test classpath? " + entries)
-    }
-  }
-
-  def extractor = new ScalaExtractor() {
-    def classpath = Seq(scalalib)
-  }
+  def extractor = TestScalaCodex.extractor
 
   // @Test def testBasics () {
   //   println(process("TestA.scala", Seq(
