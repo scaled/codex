@@ -14,7 +14,7 @@ import org.junit._
 import codex.TestScalaCodex
 
 class ScalaExtractorTest {
-  def extractor = TestScalaCodex.extractor
+  def extractor = TestScalaCodex.extractor(true)
 
   // @Test def testBasics () {
   //   println(process("TestA.scala", Seq(

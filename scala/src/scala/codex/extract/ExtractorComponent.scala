@@ -14,7 +14,8 @@ import scala.tools.nsc.ast.Printers
 import scala.tools.nsc.plugins.PluginComponent
 import scala.tools.nsc.{Global, Phase}
 
-class ExtractorComponent (val global :Global, writer :Writer) extends PluginComponent {
+class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
+    extends PluginComponent {
   import global._ // for Tree, Traverser, CompilationUnit, Apply, etc.
 
   override val phaseName = "codex"
@@ -23,10 +24,16 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
 
   private var _id = Ref.Global.ROOT
 
+  private def debug (msg :Any) :Unit = if (debug) println(msg)
+
   def newPhase (prev :Phase) :Phase = new StdPhase(prev) {
     def apply (unit :CompilationUnit) {
       println("Processing " + unit + "...")
-      writer.openUnit(Source.fromString(unit.source.file.path))
+      val sfile = unit.source.file
+      writer.openUnit(sfile.underlyingSource match {
+        case          None => Source.fromString(sfile.path)
+        case Some(archive) => new Source.ArchiveEntry(archive.path, sfile.path)
+      })
       val trans = newTranslator
       trans.traverse(unit.body)
       writer.closeUnit()
@@ -49,7 +56,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
       // positions without start/end or with bogus offset have generally been inserted during a
       // later compiler phase (e.g. type inference) and are not in the source code; so ignore
       if (pos.start >= 0 && pos.offset < _curpos.end) {
-        println(s"$whence.emitUse($name, $pos)")
+        debug(s"$whence.emitUse($name, $pos)")
         writer.emitUse(ref(sym), kind(sym), pos.offset, name)
       }
     }
@@ -57,7 +64,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
       // positions without start/end or with bogus offset have generally been inserted during a
       // later compiler phase (e.g. type inference) and are not in the source code; so ignore
       if (pos.start >= 0 && pos.offset < _curpos.end) {
-        println(s"$whence.emitUse($pos)")
+        debug(s"$whence.emitUse($pos)")
         writer.emitUse(ref(sym), kind(sym), pos.offset, pos.end-pos.offset)
       }
     }
@@ -112,7 +119,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
             val kind = if (sym.isModuleClass) CKind.MODULE else CKind.TYPE
             val flavor = if (sym.isModuleClass) Flavor.OBJECT else Flavor.CLASS // TODO: trait
             val isExp = true // TODO
-            println(s"ClassDef($cname) ${_curpos}")
+            debug(s"ClassDef($cname) ${_curpos}")
             openDef(cname, kind, flavor, isExp, access(mods))
             emitSig(tree, writer)
             super.traverse(tree)
@@ -126,7 +133,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
         withTree(mname, t) {
           val flavor = Flavor.OBJECT // TODO
           val isExp = true // TODO
-          println(s"ModuleDef($mname) ${_curpos}")
+          debug(s"ModuleDef($mname) ${_curpos}")
           openDef(mname, CKind.MODULE, flavor, isExp, access(mods))
           emitSig(tree, writer)
           super.traverse(tree)
@@ -149,7 +156,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
           else if (sym.isParameter) Flavor.PARAM
           else Flavor.LOCAL
           val isExp = true // TODO
-          println(s"ValDef($vname, ${sym.flagString}) ${_curpos}")
+          debug(s"ValDef($vname, ${sym.flagString}) ${_curpos}")
           openDef(vname, CKind.VALUE, flavor, isExp, access(mods))
           emitSig(tree, writer)
           // if our type-tree is inferred (the only way we can tell that is if it has the same
@@ -181,7 +188,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
             val isExp = true // TODO
             val dname = if (isCtor) currentOwner.name.toString // owning class name
                         else name.toString // bare name of the def, no type info
-            println(s"DefDef($mname, ${sym.flagString}, stable=${sym.isStable}) ${_curpos}")
+            debug(s"DefDef($mname, ${sym.flagString}, stable=${sym.isStable}) ${_curpos}")
             openDef(dname, CKind.FUNC, flavor, isExp, access(mods))
             emitSig(tree, writer)
             // if our type-tree is inferred (the only way we can tell that is if it has the same
@@ -195,7 +202,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
       }
 
       case t @ TypeDef(mods, name, tparams, rhs) => {
-        println("TypeDef " + t)
+        debug("TypeDef " + t)
       }
 
       case t @ Ident(name) => {
@@ -207,13 +214,13 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
       }
 
       case t @ New(tpt) => {
-        println(s"New($tpt) ${decode(t.pos)}")
+        debug(s"New($tpt) ${decode(t.pos)}")
         super.traverse(t)
       }
 
       case t @ Select(qual, name) => {
         val sym = t.symbol
-        println(s"Select($qual, $name) (${isIgnored(sym)})")
+        debug(s"Select($qual, $name) (${isIgnored(sym)})")
         if (!isIgnored(sym)) {
           // either this select node or our qualifier might be "fake", so ignore as needed
           if (isRangePos(t.pos) && name != nme.CONSTRUCTOR) {
@@ -223,9 +230,9 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
             if (nstr startsWith "$") emitUse("Select", sym, decode(t.pos))
             else emitUse("Select", sym, name.toString, t.pos)
           }
-          // else println(s"Skipping Select(name=$name)...")
+          // else debug(s"Skipping Select(name=$name)...")
           if (isRangePos(qual.pos)) traverse(qual)
-          // else println(s"Skipping Select(qual=$qual)...")
+          // else debug(s"Skipping Select(qual=$qual)...")
 
           // // select can be wacky in two exciting ways; either the qual can be a This which was
           // // magicked up and doesn't exist in the source, or the name can be apply which also
@@ -240,7 +247,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
           //   // for the name but we do traverse the qualifier
           //   else if (name == nme.apply || name == nme.CONSTRUCTOR) super.traverse(t)
           //   // if the name's not 'apply', then we're lost at sea...
-          //   else println(s"Mystery coincident Select($qual, $name) (sel=${decode(t.pos)} qual=${decode(qual.pos)})")
+          //   else debug(s"Mystery coincident Select($qual, $name) (sel=${decode(t.pos)} qual=${decode(qual.pos)})")
           // } else {
           //   super.traverse(t)
           //   emitUse("Select", sym, name.toString, t.pos)
@@ -248,20 +255,20 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
 
           // // this may be an implicit apply, in which case ignore it
           // if (t.pos.point != qual.pos.point) emitUse("Select", sym, name.toString, t.pos)
-          // else println(s"Dropping implicit Select($qual, $name) (${t.pos.point} ${qual.pos.point})")
+          // else debug(s"Dropping implicit Select($qual, $name) (${t.pos.point} ${qual.pos.point})")
         }
       }
 
       case t @ Apply(fun, args) => {
-        println("----------------------")
-        println(s"${showRaw(t)} ${decode(t.pos)}")
-        println(t)
+        debug("----------------------")
+        debug(s"${showRaw(t)} ${decode(t.pos)}")
+        debug(t)
         super.traverse(t)
       }
 
       case t @ This(qual) => {
         val pos = decode(t.pos)
-        println(s"This($qual)")
+        debug(s"This($qual)")
         // if the start/end is more than 4 characters, then this is a qualified this (i.e.
         // Foo.this); yes, the Scala parser doesn't parse that as a Select(), wtf?
         val name = if (pos.end-pos.start == 4) "this" else s"$qual.this"
@@ -272,7 +279,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
 
       case tt :TypeTree => {
         val sym = tt.symbol
-        println(s"${showRaw(tt)} (${_ignores(tt)})")
+        debug(s"${showRaw(tt)} (${_ignores(tt)})")
         if (!_ignores(tt)) tt.original match {
           case null => emitUse("TypeTree", sym, decode(tt.pos))
           case orig => traverse(orig)
@@ -282,7 +289,7 @@ class ExtractorComponent (val global :Global, writer :Writer) extends PluginComp
       case _ =>
         val sym = tree.symbol
         if (sym == null || !isIgnored(sym)) {
-          println("TODO " + tree.getClass)
+          debug("TODO " + tree.getClass)
           super.traverse(tree)
         }
     }

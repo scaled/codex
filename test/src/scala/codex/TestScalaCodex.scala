@@ -29,8 +29,9 @@ object TestScalaCodex {
     }
   }
 
-  def extractor = new ScalaExtractor() {
+  def extractor (dbg :Boolean) = new ScalaExtractor() {
     def classpath = Seq(scalalib)
+    override protected def debug  = dbg
   }
 
   def main (args :Array[String]) {
@@ -41,11 +42,11 @@ object TestScalaCodex {
         case  "tops" => tops(store)
         case  "dump" => dump(store, args(1))
         case _ =>
-          System.err.println("Usage: TestCodex command")
-          System.err.println("  command is one of:")
-          System.err.println("    index [scala|path/to/some-source.jar]")
-          System.err.println("    dump  refString (i.e. 'foo.bar Baz')")
-          System.exit(0)
+          println("Usage: TestCodex command")
+          println("  command is one of:")
+          println("    index [scala|path/to/some-source.jar]")
+          println("    dump  refString (i.e. 'foo.bar Baz')")
+          sys.exit(0)
       }
     } finally {
       store.close()
@@ -56,13 +57,12 @@ object TestScalaCodex {
     store.clear()
 
     val start = System.currentTimeMillis()
-    val extract = extractor
+    val extract = extractor(false)
     what match {
       case "scala" =>
         val scalaVers = "2.12.0-M3"
         val zip = Paths.get(System.getProperty("user.home") + "/.m2/repository/org/scala-lang/" +
           s"scala-library/$scalaVers/scala-library-$scalaVers-sources.jar")
-        println(zip)
         extract.process(new SourceSet.Archive(zip), store.writer)
 
       case _ =>
@@ -70,15 +70,15 @@ object TestScalaCodex {
     }
 
     val end = System.currentTimeMillis()
-    System.err.println("Extract and store: " + ((end-start)/1000L) + "s")
+    println("Extract and store: " + ((end-start)/1000L) + "s")
 
-    System.out.println(store.defCount + " defs.")
-    System.out.println(store.nameCount + " names.")
+    println(store.defCount + " defs.")
+    println(store.nameCount + " names.")
   }
 
   private def tops (store :MapDBStore) {
     for (top <- store.topLevelDefs()) {
-      if (top.kind != Kind.SYNTHETIC) System.out.println(top)
+      if (top.kind != Kind.SYNTHETIC) println(top)
     }
   }
 
@@ -91,8 +91,8 @@ object TestScalaCodex {
   private def dump (indent :String, df :Def) {
     // printDef(indent, def, "")
     val sig = if (df.sig.isPresent) df.sig.get.text else (df.kind + " " + df.name)
-    System.out.println(indent + df.sig)
-    if (df.kind == Kind.TYPE) System.out.println(indent + "  (source: " + df.source + ")")
+    println(indent + sig + " (" + df.kind + ")")
+    if (df.kind == Kind.TYPE) println(indent + "  (source: " + df.source + ")")
     val iter = df.members.iterator ; while (iter.hasNext) {
       val mdef = iter.next
       if (mdef.kind != Kind.SYNTHETIC) dump(indent + "  ", mdef)
@@ -100,6 +100,6 @@ object TestScalaCodex {
   }
 
   private def printDef (prefix :String, df :Def, suffix :String) {
-    System.out.println(prefix + df.kind + " " + df.name + " " + df.id + suffix)
+    println(prefix + df.kind + " " + df.name + " " + df.id + suffix)
   }
 }

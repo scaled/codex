@@ -36,6 +36,9 @@ abstract class ScalaExtractor extends Extractor {
     process0(files.map { case (name, code) => new BatchSourceFile(name, code) }, writer)
   }
 
+  /** Override and set to true when debugging. */
+  protected def debug = false
+
   private def process0 (sources :List[SourceFile], writer :Writer) {
     val settings = new Settings
     settings.classpath.value = ClassPath.join(classpath.map(_.toString).toSeq :_*)
@@ -44,7 +47,7 @@ abstract class ScalaExtractor extends Extractor {
     settings.outputDirs.setSingleOutput(new VirtualDirectory("(memory)", None))
 
     val compiler = new Global(settings, new ConsoleReporter(settings)) with Positions {
-      val rcomp = new ExtractorComponent(this, writer)
+      val rcomp = new ExtractorComponent(this, writer, debug)
       override protected def computeInternalPhases () {
         super.computeInternalPhases
         phasesSet += rcomp
@@ -60,6 +63,7 @@ abstract class ScalaExtractor extends Extractor {
 
   private def zipToVirtualFiles (sa :SourceSet.Archive) :Seq[VirtualFile] = {
     val archive = new ZipFile(sa.archive.toFile)
+    val archiveFile = AbstractFile.getFile(sa.archive.toFile)
     val files = ArrayBuffer[VirtualFile]()
     val enum = archive.entries ; while (enum.hasMoreElements) {
       val entry = enum.nextElement
@@ -68,6 +72,7 @@ abstract class ScalaExtractor extends Extractor {
           override def lastModified = entry.getTime
           override def input        = archive getInputStream entry
           override def sizeOption   = Some(entry.getSize.toInt)
+          override def underlyingSource = Some(archiveFile)
         }
       }
     }
