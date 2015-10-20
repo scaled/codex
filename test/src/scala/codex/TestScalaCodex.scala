@@ -29,8 +29,8 @@ object TestScalaCodex {
     }
   }
 
-  def extractor (dbg :Boolean) = new ScalaExtractor() {
-    def classpath = Seq(scalalib)
+  def extractor (dbg :Boolean, cp :Seq[Path] = Seq()) = new ScalaExtractor() {
+    def classpath = cp ++ Seq(scalalib)
     override protected def debug  = dbg
   }
 
@@ -53,20 +53,39 @@ object TestScalaCodex {
     }
   }
 
+  val scalaVers = "2.12.0-M3"
+  val home = System.getProperty("user.home")
+
+  private def mavenJar (groupId :String, artId :String, vers :String, qual :String = "") :Path = {
+    val groupPath = groupId.replace('.', '/')
+    val suff = if (qual == "") "" else s"-$qual"
+    Paths.get(s"$home/.m2/repository/$groupPath/$artId/$vers/$artId-$vers$suff.jar")
+  }
+
   private def index (store :MapDBStore, what :String) {
     store.clear()
 
     val start = System.currentTimeMillis()
-    val extract = extractor(false)
     what match {
       case "scala" =>
-        val scalaVers = "2.12.0-M3"
-        val zip = Paths.get(System.getProperty("user.home") + "/.m2/repository/org/scala-lang/" +
-          s"scala-library/$scalaVers/scala-library-$scalaVers-sources.jar")
-        extract.process(new SourceSet.Archive(zip), store.writer)
+        val zip = mavenJar("org.scala-lang", "scala-library", scalaVers, "sources")
+        extractor(false).process(new SourceSet.Archive(zip), store.writer)
+
+      case "nsc" =>
+        val cp = Seq(
+          // mavenJar("org.scala-lang","scala-library",scalaVers),
+          mavenJar("org.scala-lang", "scala-reflect", scalaVers),
+          mavenJar("org.scala-lang.modules", s"scala-xml_$scalaVers", "1.0.5"),
+          mavenJar("org.scala-lang.modules", s"scala-parser-combinators_$scalaVers", "1.0.4"),
+          mavenJar("org.scala-lang.modules", "scala-asm", "5.0.4-scala-3"),
+          mavenJar("org.apache.ant", "ant", "1.9.3"),
+          mavenJar("jline", "jline", "2.12.1"))
+        val zip = mavenJar("org.scala-lang", "scala-compiler", scalaVers, "sources")
+        extractor(false, cp).process(new SourceSet.Archive(
+          zip, ent => !ent.getName.contains("/partest/")), store.writer)
 
       case _ =>
-        extract.process(new SourceSet.Archive(Paths.get(what)), store.writer)
+        extractor(false).process(new SourceSet.Archive(Paths.get(what)), store.writer)
     }
 
     val end = System.currentTimeMillis()
