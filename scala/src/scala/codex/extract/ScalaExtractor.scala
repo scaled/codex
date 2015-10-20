@@ -67,7 +67,8 @@ abstract class ScalaExtractor extends Extractor {
     val files = ArrayBuffer[VirtualFile]()
     val enum = archive.entries ; while (enum.hasMoreElements) {
       val entry = enum.nextElement
-      if (sa.filter.test(entry) && entry.getName.endsWith(".scala")) {
+      if (sa.filter.test(entry) && (entry.getName.endsWith(".scala") ||
+                                    entry.getName.endsWith(".java"))) {
         files += new VirtualFile(entry.getName, entry.getName) {
           override def lastModified = entry.getTime
           override def input        = archive getInputStream entry
