@@ -39,8 +39,12 @@ abstract class ScalaExtractor extends Extractor {
   /** Override and set to true when debugging. */
   protected def debug = false
 
+  /** Extra arguments to pass to the compiler. */
+  protected def compilerArgs :List[String] = Nil
+
   private def process0 (sources :List[SourceFile], writer :Writer) {
     val settings = new Settings
+    settings.processArguments(compilerArgs, true)
     settings.classpath.value = ClassPath.join(classpath.map(_.toString).toSeq :_*)
     settings.Yrangepos.value = true
     // save class files to a virtual directory in memory (TODO: how to disable class gen?)
