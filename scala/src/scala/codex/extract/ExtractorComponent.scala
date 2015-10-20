@@ -125,7 +125,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
         if (!isIgnored(sym)) {
           val cname = name.toString
           withTree(cname, t) {
-            val kind = if (sym.isModuleClass) CKind.MODULE else CKind.TYPE
+            val kind = CKind.TYPE // if (sym.isModuleClass) CKind.MODULE else CKind.TYPE
             val flavor = if (sym.isModuleClass) Flavor.OBJECT else Flavor.CLASS // TODO: trait
             val isExp = true // TODO
             debug(s"ClassDef($cname) ${_curpos}")
@@ -143,7 +143,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
           val flavor = Flavor.OBJECT // TODO
           val isExp = true // TODO
           debug(s"ModuleDef($mname) ${_curpos}")
-          openDef(mname, CKind.MODULE, flavor, isExp, access(mods))
+          openDef(mname, CKind.TYPE/*CKind.MODULE*/, flavor, isExp, access(mods))
           emitSig(tree, writer)
           super.traverse(tree)
           writer.closeDef()
@@ -312,7 +312,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
       args.replaceAll("\\([^:]+:", "(").replaceAll(",[^:]+:", ",").replaceAll(" ", "")
 
     private def kind (sym :Symbol) :CKind = sym match {
-      case tsym :TypeSymbol => if (sym.hasPackageFlag || sym.isModule) CKind.MODULE else CKind.TYPE
+      case tsym :TypeSymbol => if (sym.hasPackageFlag /*|| sym.isModule*/) CKind.MODULE else CKind.TYPE
       case msym :MethodSymbol => if (sym.isGetter || sym.isSetter) CKind.VALUE else CKind.FUNC
       case _ => CKind.VALUE // TODO
     }
