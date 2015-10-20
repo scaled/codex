@@ -30,10 +30,9 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
     def apply (unit :CompilationUnit) {
       println("Processing " + unit + "...")
       val sfile = unit.source.file
-      writer.openUnit(sfile.underlyingSource match {
-        case          None => Source.fromString(sfile.path)
-        case Some(archive) => new Source.ArchiveEntry(archive.path, sfile.path)
-      })
+      val ufile = sfile.underlyingSource getOrElse sfile
+      writer.openUnit(if (ufile != sfile) new Source.ArchiveEntry(ufile.path, sfile.path)
+                      else Source.fromString(sfile.path))
       val trans = newTranslator
       trans.traverse(unit.body)
       writer.closeUnit()
