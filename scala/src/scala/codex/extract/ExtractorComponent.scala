@@ -334,7 +334,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
 
     private def pkgRef (sym :Symbol, pref :Ref.Global) :Ref.Global = {
       val osym = sym.owner
-      (if (osym.isRoot || osym.isEmptyPackageClass) pref
+      (if (osym == NoSymbol || osym.isRoot || osym.isEmptyPackageClass) pref
        else pkgRef(osym, pref)).plus(sym.nameString)
     }
 
