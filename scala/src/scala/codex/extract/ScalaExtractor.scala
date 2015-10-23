@@ -4,6 +4,7 @@
 
 package codex.extract
 
+import java.io.{PrintWriter, StringWriter}
 import java.lang.{Iterable => JIterable}
 import java.nio.file.Path
 import java.util.zip.ZipFile
@@ -42,15 +43,25 @@ abstract class ScalaExtractor extends Extractor {
   /** Extra arguments to pass to the compiler. */
   protected def compilerArgs :List[String] = Nil
 
+  /** Output from extractor compiler is routed through here. */
+  protected def log (msg :String) = println(msg)
+
   private def process0 (sources :List[SourceFile], writer :Writer) {
-    val settings = new Settings
+    val settings = new Settings(log)
     settings.processArguments(compilerArgs, true)
     settings.classpath.value = ClassPath.join(classpath.map(_.toString).toSeq :_*)
     settings.Yrangepos.value = true
     // save class files to a virtual directory in memory (TODO: how to disable class gen?)
     settings.outputDirs.setSingleOutput(new VirtualDirectory("(memory)", None))
 
-    val compiler = new Global(settings, new ConsoleReporter(settings)) with Positions {
+    val logWriter = new StringWriter() {
+      override def flush () {
+        log(toString)
+        getBuffer.setLength(0)
+      }
+    }
+    val reporter = new ConsoleReporter(settings, Console.in, new PrintWriter(logWriter))
+    val compiler = new Global(settings, reporter) with Positions {
       val rcomp = new ExtractorComponent(this, writer, debug)
       override protected def computeInternalPhases () {
         super.computeInternalPhases
