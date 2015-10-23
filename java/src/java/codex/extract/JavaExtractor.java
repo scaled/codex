@@ -83,6 +83,10 @@ public class JavaExtractor implements Extractor {
     process0(objs, writer);
   }
 
+  protected void log (String message) {
+    System.out.println(message);
+  }
+
   private void process0 (Iterable<? extends JavaFileObject> files, Writer writer) {
     try {
       List<String> opts = Lists.newArrayList("-Xjcov");
@@ -129,7 +133,7 @@ public class JavaExtractor implements Extractor {
         if (sb.length() > 0) sb.append(", ");
         sb.append(kind.toString().toLowerCase()).append('=').append(count);
       }
-      if (sb.length() > 0) System.out.println("Diagnostics [" + sb + "]");
+      if (sb.length() > 0) log("Diagnostics [" + sb + "]");
 
     } catch (Exception e) {
       throw new RuntimeException(e);
