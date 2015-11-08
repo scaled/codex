@@ -127,10 +127,10 @@ public class TokenExtractor implements Extractor {
           int off = counter.offset-curdef.length()-1;
           writer.openDef(curid, curdef, Kind.MODULE, Flavor.NONE, true, Access.PUBLIC,
                          off, off, off);
-          // if the next token is a semicolon (or if this is Scala and the next token is not an open
-          // bracket), pretend the rest of the file is one big block
+          // if the next token is a semicolon (or if this is Scala or Kotlin and the next token is
+          // not an open bracket), pretend the rest of the file is one big block
           int ntok = tok.nextToken();
-          if (ntok == ';' || (ntok != '{' && lang == "scala")) {
+          if (ntok == ';' || (ntok != '{' && (lang == "scala" || lang == "kt"))) {
             blocks.push(curdef);
             curdef = "";
           }
@@ -169,6 +169,8 @@ public class TokenExtractor implements Extractor {
         "class", Kind.TYPE, "interface", Kind.TYPE);
       case "cs": return ImmutableMap.of(
         "class", Kind.TYPE, "interface", Kind.TYPE, "enum", Kind.TYPE, "struct", Kind.TYPE);
+      case "kt": return ImmutableMap.of(
+        "class", Kind.TYPE, "object", Kind.MODULE, "interface", Kind.TYPE, "fun", Kind.FUNC);
       default: throw new IllegalArgumentException("Unsupported language: " + suff);
     }
   }
