@@ -66,12 +66,18 @@ public class TokenExtractor implements Extractor {
   // relies on the fact that StreamTokenizer only ever calls Reader.read()
   private class CountingReader extends FilterReader {
     public int offset = 0;
+    public StringBuilder curline = new StringBuilder();
+    public boolean atEOL;
     public CountingReader (Reader reader) {
       super(reader);
     }
     @Override public int read () throws IOException {
       offset += 1;
-      return super.read();
+      int c = super.read();
+      if (atEOL) curline.setLength(0);
+      atEOL = (c == '\n');
+      if (!atEOL) curline.append((char)c);
+      return c;
     }
   }
 
@@ -127,6 +133,7 @@ public class TokenExtractor implements Extractor {
           int off = counter.offset-curdef.length()-1;
           writer.openDef(curid, curdef, Kind.MODULE, Flavor.NONE, true, Access.PUBLIC,
                          off, off, off);
+          writer.emitSig(counter.curline.toString().trim());
           // if the next token is a semicolon (or if this is Scala or Kotlin and the next token is
           // not an open bracket), pretend the rest of the file is one big block
           int ntok = tok.nextToken();
@@ -148,6 +155,7 @@ public class TokenExtractor implements Extractor {
             curid = curid.plus(curdef);
             int off = counter.offset-curdef.length()-1;
             writer.openDef(curid, curdef, kind, Flavor.NONE, true, Access.PUBLIC, off, off, off);
+            writer.emitSig(counter.curline.toString().trim());
           }
         }
         prevtok = tokstr;

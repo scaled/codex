@@ -47,7 +47,10 @@ public class TokenExtractorTest {
     TokenExtractor ex = new TokenExtractor();
     ProjectStore store = new MapDBStore("test");
     ex.process("TestA.scala", TESTA, store.writer());
-    // store.visit(new Source.File("TestA.scala"), el -> System.out.println(el));
+    // store.visit(new Source.File("TestA.scala"), el -> {
+    //   System.out.println(el);
+    //   if (el instanceof Def) System.out.println(((Def)el).sig());
+    // });
 
     Ref.Global baz = Ref.Global.fromString("com.test Foo Bar baz");
     Optional<Def> bdef = store.def(baz);
