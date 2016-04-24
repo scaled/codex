@@ -51,7 +51,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     _unit = unit;
     try {
       if (unit.packge == null) {
-        warn("Null package? " + unit); // TODO
+        warn("Null package? " + unit.sourcefile); // TODO
         return null;
       }
 
