@@ -89,7 +89,9 @@ public class JavaExtractor implements Extractor {
 
   private void process0 (Iterable<? extends JavaFileObject> files, Writer writer) {
     try {
-      List<String> opts = Lists.newArrayList("-Xjcov");
+      // we set our output dir to tmp.dir just in case annotation processors decide to generate
+      // output even though we don't want any
+      List<String> opts = Lists.newArrayList("-Xjcov", "-d", System.getProperty("java.io.tmpdir"));
 
       String cp = Joiner.on(File.pathSeparator).join(classpath());
       if (cp.length() > 0) {
