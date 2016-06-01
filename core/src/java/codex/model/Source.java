@@ -11,6 +11,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -24,6 +25,10 @@ public abstract class Source {
 
     /** The absolute path to the source file. */
     public final String path;
+
+    public File (Path path) {
+      this(path.toString());
+    }
 
     public File (String path) {
       if (path == null) throw new NullPointerException();
@@ -64,6 +69,10 @@ public abstract class Source {
 
     /** The path to the source file, inside the archive file. */
     public final String sourcePath;
+
+    public ArchiveEntry (Path archivePath, String sourcePath) {
+      this(archivePath.toString(), sourcePath);
+    }
 
     public ArchiveEntry (String archivePath, String sourcePath) {
       if (archivePath == null || sourcePath == null) throw new NullPointerException();

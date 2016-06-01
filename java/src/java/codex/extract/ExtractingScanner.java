@@ -21,6 +21,8 @@ import com.sun.tools.javac.util.List;
 import com.sun.tools.javac.util.Name;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
@@ -600,11 +602,19 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
 
   private Source uriToSource (URI uri) {
     String str = uri.toString();
-    String path;
-    if (str.startsWith("jar:file:")) path = str.substring("jar:file:".length());
-    else if (str.startsWith("zip:file:")) path = str.substring("zip:file:".length());
-    else path = uri.getPath();
-    return Source.fromString(path);
+    if (str.startsWith("file:")) return new Source.File(Paths.get(uri));
+    else if (str.startsWith("jar:file:") || str.startsWith("zip:file:")) {
+      int bangIdx = str.indexOf("!");
+      String entryPath = str.substring(bangIdx+1);
+      if (entryPath.startsWith("/")) entryPath = entryPath.substring(1);
+      try {
+        URI archiveURI = new URI(str.substring(4, bangIdx));
+        return new Source.ArchiveEntry(Paths.get(archiveURI), entryPath);
+      } catch (URISyntaxException use) {
+        throw new RuntimeException("uriToSource failed " + uri, use);
+      }
+    }
+    else return Source.fromString(uri.getPath());
   }
 
   private Pattern _starPref = Pattern.compile("^\\* ?");
