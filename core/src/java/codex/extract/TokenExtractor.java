@@ -179,6 +179,8 @@ public class TokenExtractor implements Extractor {
         "class", Kind.TYPE, "interface", Kind.TYPE, "enum", Kind.TYPE, "struct", Kind.TYPE);
       case "kt": return ImmutableMap.of(
         "class", Kind.TYPE, "object", Kind.MODULE, "interface", Kind.TYPE, "fun", Kind.FUNC);
+      case "js": return ImmutableMap.of(
+        "class", Kind.TYPE, "interface", Kind.TYPE, "function", Kind.FUNC);
       default: throw new IllegalArgumentException("Unsupported language: " + suff);
     }
   }
