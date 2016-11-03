@@ -17,14 +17,15 @@ import scala.tools.nsc.util.ClassPath
 import scala.tools.nsc.{Global, Settings}
 
 abstract class ScalaExtractor extends Extractor {
-  import scala.collection.convert.WrapAsScala._
+  import scala.collection.JavaConverters._
 
   /** Provides the classpath used by the compiler. */
   def classpath :Iterable[Path]
 
   override def process (sources :SourceSet, writer :Writer) = sources match {
     case sf :SourceSet.Files => process0(
-      sf.paths.toList.map(f => new BatchSourceFile(AbstractFile.getFile(f.toFile))), writer)
+      (List() ++ sf.paths.asScala).map(
+        f => new BatchSourceFile(AbstractFile.getFile(f.toFile))), writer)
     case sa :SourceSet.Archive =>
       process0(zipToVirtualFiles(sa).map(new BatchSourceFile(_)).toList, writer)
   }

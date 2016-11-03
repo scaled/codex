@@ -19,8 +19,7 @@ import scaled._
 
 class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(name) {
 
-  import scala.collection.convert.WrapAsScala.asScalaSet
-  import scala.collection.convert.WrapAsJava.setAsJavaSet
+  import scala.collection.JavaConverters._
   import BTreeKeySerializer.{
     ZERO_OR_POSITIVE_LONG => longSz, ZERO_OR_POSITIVE_INT => intSz, STRING => stringSz,
     Tuple2KeySerializer => T2KS, Tuple3KeySerializer => T3KS}
@@ -158,7 +157,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
           // if this def spans source files, do more complex member def merging
           val extMemDefIds = if (!defSpansSources(df)) NoIds
                              else _defMems.getOrDefault(df.defId, NoIds) -- oldSourceIds
-          val ids = extMemDefIds ++ (if (memDefIds == null) NoIds else asScalaSet(memDefIds))
+          val ids = extMemDefIds ++ (if (memDefIds == null) NoIds else memDefIds.asScala)
           if (ids.isEmpty) _defMems.remove(df.defId)
           else _defMems.put(df.defId, ids)
         }
@@ -237,7 +236,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
 
       // filter the reused source ids from the old source ids and delete any that remain
       val staleIds = oldSourceIds -- newSourceIds
-      if (!staleIds.isEmpty()) removeDefs(staleIds)
+      if (!staleIds.isEmpty) removeDefs(staleIds)
       _srcDefs.put(unitId, newSourceIds)
       _srcInfo.put(unitId, SourceInfo(srcKey, indexed))
 
@@ -280,7 +279,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
   override def sourceDefs (source :Source) = {
     val unitId = _srcToId.get(source.toString())
     if (unitId == null) throw new IllegalArgumentException("Unknown source " + source)
-    toDefs("sourceDefs", _srcDefs.get(unitId))
+    toDefs("sourceDefs", _srcDefs.get(unitId).asJava)
   }
 
   override def `def` (defId :Id) = reqdef(defId, _defs.get(defId))
@@ -290,7 +289,8 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
   }
   override def ref (defId :Id) = globalRef(toNameId(defId))
 
-  override def defsIn (defId :Id) = toDefs("defsIn", _defMems.getOrDefault(defId, NoIds))
+  override def defsIn (defId :Id) =
+    toDefs("defsIn", _defMems.getOrDefault(defId, NoIds).asJava)
 
   override def usesIn (defId :Id) = resolveUses(defUses(defId))
   private def defUses (defId :Id) = _defUses.getOrDefault(defId, Seq())

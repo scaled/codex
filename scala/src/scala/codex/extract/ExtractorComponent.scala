@@ -303,9 +303,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
         }
     }
 
-    private def isIgnored (sym :Symbol) = (!sym.exists ||
-                                           sym.isImplementationArtifact ||
-                                           sym.isImplClass)
+    private def isIgnored (sym :Symbol) = (!sym.exists || sym.isImplementationArtifact)
 
     // trims "(s: String, c: Int)Seq[String]" to "(String,Int)Seq[String]"
     private def trimArgs (args :String) =
