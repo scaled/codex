@@ -82,7 +82,7 @@ public class TokenExtractor implements Extractor {
   }
 
   private void process (Source source, Reader reader, Writer writer) throws IOException {
-    writer.openUnit(source);
+    openUnit(source, writer);
 
     String lang = source.fileExt().intern();
     Map<String,Kind> kinds = kindsFor(lang);
@@ -165,6 +165,14 @@ public class TokenExtractor implements Extractor {
     // if our last def had no block associated with it, we're exiting it now
     if (curdef != "") writer.closeDef();
 
+    closeUnit(source, writer);
+  }
+
+  protected void openUnit (Source source, Writer writer) {
+    writer.openUnit(source);
+  }
+
+  protected void closeUnit (Source source, Writer writer) {
     writer.closeUnit();
   }
 

@@ -138,6 +138,18 @@ public abstract class Source {
     return (didx == -1) ? "" : path.substring(didx+1);
   }
 
+  /** Returns the path to this source with {@code root} stripped from it, if applicable. */
+  public String relativePath (String root) {
+    String path = path();
+    if (path.startsWith(root)) {
+      path = path.substring(root.length());
+    }
+    if (path.length() > 0 && path.charAt(0) == pathSeparator()) {
+      path = path.substring(1);
+    }
+    return path;
+  }
+
   /** Returns the last modified time of the source file. */
   public abstract long lastModified () throws IOException;
 
