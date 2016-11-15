@@ -82,13 +82,11 @@ public class TokenExtractor implements Extractor {
   }
 
   private void process (Source source, Reader reader, Writer writer) throws IOException {
-    openUnit(source, writer);
-
     String lang = source.fileExt().intern();
     Map<String,Kind> kinds = kindsFor(lang);
     String prevtok = "";
     String curdef = "";
-    Ref.Global curid = Ref.Global.ROOT;
+    Ref.Global curid = openUnit(source, writer);
     Deque<String> blocks = new ArrayDeque<>();
 
     CountingReader counter = new CountingReader(new BufferedReader(reader));
@@ -168,8 +166,9 @@ public class TokenExtractor implements Extractor {
     closeUnit(source, writer);
   }
 
-  protected void openUnit (Source source, Writer writer) {
+  protected Ref.Global openUnit (Source source, Writer writer) {
     writer.openUnit(source);
+    return Ref.Global.ROOT;
   }
 
   protected void closeUnit (Source source, Writer writer) {
