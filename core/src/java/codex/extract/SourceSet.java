@@ -74,4 +74,8 @@ public abstract class SourceSet {
 
   /** Returns the number of files in this source set. */
   public abstract int size ();
+
+  @Override public String toString () {
+    return "SourceSet:" + size();
+  }
 }
