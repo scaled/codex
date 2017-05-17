@@ -8,59 +8,18 @@ import codex.model.*;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.FilterReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StreamTokenizer;
-import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Map;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
-public class TokenExtractor implements Extractor {
-
-  @Override public void process (SourceSet sources, Writer writer) throws IOException {
-    writer.openSession();
-    try {
-      if (sources instanceof SourceSet.Files) {
-        for (Path path : ((SourceSet.Files)sources).paths) {
-          process(new Source.File(path.toString()), new FileReader(path.toFile()), writer);
-        }
-    } else {
-        SourceSet.Archive sa = (SourceSet.Archive)sources;
-        ZipFile zip = new ZipFile(sa.archive.toFile());
-        String zipPath = sa.archive.toString();
-        for (ZipEntry entry :
-             zip.stream().filter(sa.filter).collect(Collectors.<ZipEntry>toList())) {
-          process(new Source.ArchiveEntry(zipPath, entry.getName()),
-                  new InputStreamReader(zip.getInputStream(entry), "UTF-8"), writer);
-        }
-      }
-    } finally {
-      writer.closeSession();
-    }
-  }
-
-  /** Combines {@code file} and {@code code} into a test file and processes it.
-    * Metadata is emitted to {@code writer}. */
-  public void process (String file, String code, Writer writer) throws IOException {
-    writer.openSession();
-    try {
-      process(new Source.File(file), new StringReader(code), writer);
-    } finally {
-      writer.closeSession();
-    }
-  }
+public class TokenExtractor extends AbstractExtractor {
 
   // used to keep track of file offset since StreamTokenizer doesn't do that for us; note this
   // relies on the fact that StreamTokenizer only ever calls Reader.read()
@@ -81,7 +40,8 @@ public class TokenExtractor implements Extractor {
     }
   }
 
-  private void process (Source source, Reader reader, Writer writer) throws IOException {
+  @Override
+  protected void process (Source source, Reader reader, Writer writer) throws IOException {
     String lang = source.fileExt().intern();
     Map<String,Kind> kinds = kindsFor(lang);
     String prevtok = "";
@@ -187,7 +147,7 @@ public class TokenExtractor implements Extractor {
       case "kt": return ImmutableMap.of(
         "class", Kind.TYPE, "object", Kind.MODULE, "interface", Kind.TYPE, "fun", Kind.FUNC);
       case "js": return ImmutableMap.of(
-        "class", Kind.TYPE, "interface", Kind.TYPE, "function", Kind.FUNC);
+        "class", Kind.TYPE, "interface", Kind.TYPE, "type", Kind.TYPE, "function", Kind.FUNC);
       default: throw new IllegalArgumentException("Unsupported language: " + suff);
     }
   }
