@@ -18,63 +18,7 @@ import java.util.Set;
  */
 public abstract class BatchWriter extends Writer {
 
-  @Override public void openUnit (Source source) {
-    _curSource = source;
-    _curDef = new DefInfo(null, Ref.Global.ROOT, null, null, null, false, null, 0, 0, 0);
-  }
-
-  @Override public void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
-                                 boolean exported, Access access,
-                                 int offset, int bodyStart, int bodyEnd) {
-    checkTarget(id, "openDef");
-    _curDef = _curDef.addDef(new DefInfo(_curDef, id, name, kind, flavor, exported, access,
-                                         offset, bodyStart, bodyEnd));
-  }
-
-  @Override public void emitSig (String text) {
-    _curDef.sig = new SigInfo(text);
-  }
-  @Override public void emitSigUse (Ref.Global target, Kind kind, int offset, int length) {
-    checkTarget(target, "emitSigUse");
-    _curDef.sig.addUse(new UseInfo(target, kind, offset, length));
-  }
-
-  @Override public void emitDoc (int offset, int length) {
-    _curDef.doc = new DocInfo(offset, length);
-  }
-  @Override public void emitDocUse (Ref.Global target, Kind kind, int offset, int length) {
-    checkTarget(target, "emitDocUse");
-    _curDef.doc.addUse(new UseInfo(target, kind, offset, length));
-  }
-
-  @Override public void emitUse (Ref.Global target, Kind kind, int offset, int length) {
-    checkTarget(target, "emitUse");
-    _curDef.addUse(new UseInfo(target, kind, offset, length));
-  }
-
-  @Override public void emitRelation (Relation relation, Ref.Global target) {
-    checkTarget(target, "emitRelation");
-    _curDef.addRelation(relation, target);
-  }
-
-  @Override public void closeDef () {
-    if (_curDef.outer == null) throw new IllegalStateException("Cannot close topDef.");
-    _curDef = _curDef.outer;
-  }
-  @Override public void closeUnit () {
-    storeUnit(_curSource, _curDef);
-    _curSource = null;
-    _curDef = null;
-  }
-
-  private void checkTarget (Ref.Global target, String from) {
-    if (target == Ref.Global.ROOT) throw new IllegalArgumentException(
-      "Cannot call " + from + " with ROOT name.");
-  }
-
-  protected abstract void storeUnit (Source source, DefInfo topDef);
-
-  protected static class SigInfo {
+  public static class SigInfo {
     public final String text;
     public List<UseInfo> uses;
 
@@ -87,7 +31,7 @@ public abstract class BatchWriter extends Writer {
     }
   }
 
-  protected static class DocInfo {
+  public static class DocInfo {
     public final int offset, length;
     public List<UseInfo> uses;
 
@@ -101,7 +45,7 @@ public abstract class BatchWriter extends Writer {
     }
   }
 
-  protected static class UseInfo {
+  public static class UseInfo {
     public final Ref.Global ref;
     public final Kind refKind;
     public final int offset, length;
@@ -120,7 +64,7 @@ public abstract class BatchWriter extends Writer {
     }
   }
 
-  protected static class RelInfo {
+  public static class RelInfo {
     public final Relation relation;
     public final Ref.Global target;
 
@@ -130,7 +74,7 @@ public abstract class BatchWriter extends Writer {
     }
   }
 
-  protected static class DefInfo {
+  public static class DefInfo {
     public final DefInfo outer;
     public final Ref.Global id;
     public final String name;
@@ -200,6 +144,62 @@ public abstract class BatchWriter extends Writer {
       memDefIds.add(defId);
     }
   }
+
+  @Override public void openUnit (Source source) {
+    _curSource = source;
+    _curDef = new DefInfo(null, Ref.Global.ROOT, null, null, null, false, null, 0, 0, 0);
+  }
+
+  @Override public void openDef (Ref.Global id, String name, Kind kind, Flavor flavor,
+                                 boolean exported, Access access,
+                                 int offset, int bodyStart, int bodyEnd) {
+    checkTarget(id, "openDef");
+    _curDef = _curDef.addDef(new DefInfo(_curDef, id, name, kind, flavor, exported, access,
+                                         offset, bodyStart, bodyEnd));
+  }
+
+  @Override public void emitSig (String text) {
+    _curDef.sig = new SigInfo(text);
+  }
+  @Override public void emitSigUse (Ref.Global target, Kind kind, int offset, int length) {
+    checkTarget(target, "emitSigUse");
+    _curDef.sig.addUse(new UseInfo(target, kind, offset, length));
+  }
+
+  @Override public void emitDoc (int offset, int length) {
+    _curDef.doc = new DocInfo(offset, length);
+  }
+  @Override public void emitDocUse (Ref.Global target, Kind kind, int offset, int length) {
+    checkTarget(target, "emitDocUse");
+    _curDef.doc.addUse(new UseInfo(target, kind, offset, length));
+  }
+
+  @Override public void emitUse (Ref.Global target, Kind kind, int offset, int length) {
+    checkTarget(target, "emitUse");
+    _curDef.addUse(new UseInfo(target, kind, offset, length));
+  }
+
+  @Override public void emitRelation (Relation relation, Ref.Global target) {
+    checkTarget(target, "emitRelation");
+    _curDef.addRelation(relation, target);
+  }
+
+  @Override public void closeDef () {
+    if (_curDef.outer == null) throw new IllegalStateException("Cannot close topDef.");
+    _curDef = _curDef.outer;
+  }
+  @Override public void closeUnit () {
+    storeUnit(_curSource, _curDef);
+    _curSource = null;
+    _curDef = null;
+  }
+
+  private void checkTarget (Ref.Global target, String from) {
+    if (target == Ref.Global.ROOT) throw new IllegalArgumentException(
+      "Cannot call " + from + " with ROOT name.");
+  }
+
+  protected abstract void storeUnit (Source source, DefInfo topDef);
 
   protected Source _curSource;
   protected DefInfo _curDef;
