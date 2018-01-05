@@ -53,7 +53,7 @@ public class TestCodex {
     store.clear();
 
     long start = System.currentTimeMillis();
-    JavaExtractor extract = new JavaExtractor().summaryMode();
+    JavaExtractor extract = new JavaExtractor().setSummaryMode(true);
     switch (what) {
     case "guava":
       {

@@ -49,8 +49,8 @@ public class JavaExtractor implements Extractor {
     * blocks when indexing. This is useful when indxing the JDK, where the shape of each class is
     * useful, but the actual implementations, not so much.
     */
-  public JavaExtractor summaryMode () {
-    _omitBodies = true;
+  public JavaExtractor setSummaryMode (boolean summaryMode) {
+    _omitBodies = summaryMode;
     return this;
   }
 
