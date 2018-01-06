@@ -24,7 +24,7 @@ public class ZipUtils {
 
   public static Multiset<String> summarizeSources (ZipFile file) {
     Multiset<String> suffs = HashMultiset.create();
-    file.stream().forEach(e -> suffs.add(suffix(e.getName())));
+    file.stream().forEach(e -> { if (!e.isDirectory()) suffs.add(suffix(e.getName())); });
     return suffs;
   }
 
