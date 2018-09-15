@@ -1,2 +1,2 @@
 depend: git:https://github.com/scaled/scaled.git#std
-depend: mvn:org.mapdb:mapdb:1.0.6
+depend: mvn:org.mapdb:mapdb:1.0.9
