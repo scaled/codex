@@ -6,19 +6,19 @@ package codex.extract;
 
 import codex.extract.Utils.*;
 import codex.model.*;
-import com.sun.source.tree.*;
-import com.sun.source.util.TreePath;
-import com.sun.source.util.TreePathScanner;
-import com.sun.tools.javac.code.Flags;
-import com.sun.tools.javac.code.Scope;
-import com.sun.tools.javac.code.Symbol.*;
-import com.sun.tools.javac.code.Symbol;
-import com.sun.tools.javac.code.Type;
-import com.sun.tools.javac.code.Types;
-import com.sun.tools.javac.tree.JCTree.*;
-import com.sun.tools.javac.tree.JCTree;
-import com.sun.tools.javac.util.List;
-import com.sun.tools.javac.util.Name;
+import javac.source.tree.*;
+import javac.source.util.TreePath;
+import javac.source.util.TreePathScanner;
+import javac.tools.javac.code.Flags;
+import javac.tools.javac.code.Scope;
+import javac.tools.javac.code.Symbol.*;
+import javac.tools.javac.code.Symbol;
+import javac.tools.javac.code.Type;
+import javac.tools.javac.code.Types;
+import javac.tools.javac.tree.JCTree.*;
+import javac.tools.javac.tree.JCTree;
+import javac.tools.javac.util.List;
+import javac.tools.javac.util.Name;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -457,9 +457,9 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
     for (Type sup : _types.closure(owner.type)) {
       if (sup != owner.type) {
         Scope scope = sup.tsym.members();
-        for (Scope.Entry e = scope.lookup(m.name); e.scope != null; e = e.next()) {
-          if (!e.sym.isStatic() && m.overrides(e.sym, owner, _types, true)) {
-            writer.emitRelation(Relation.OVERRIDES, targetForTypeSym(e.sym));
+        for (Symbol sym : scope.getSymbolsByName(m.name)) {
+          if (!sym.isStatic() && m.overrides(sym, owner, _types, true)) {
+            writer.emitRelation(Relation.OVERRIDES, targetForTypeSym(sym));
           }
         }
       }
@@ -566,7 +566,7 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
         String mname = text.substring(hidx+1);
         if (hidx == 0) {
           JCClassDecl cc = _class.peek();
-          return lookup(cc.sym.members(), cc.name.table.fromString(mname));
+          return cc.sym.members().findFirst(cc.name.table.fromString(mname));
         } else {
           return null; // TODO: look up type, then resolve method
         }
@@ -618,11 +618,6 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
   }
 
   private Pattern _starPref = Pattern.compile("^\\* ?");
-
-  private Symbol lookup (Scope scope, Name name) {
-    Scope.Entry e = scope.lookup(name);
-    return (e.scope == null) ? null : e.sym;
-  }
 
   private void warn (String msg) {
     System.err.println(msg); // TODO: something better?

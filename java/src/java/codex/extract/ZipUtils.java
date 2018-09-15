@@ -6,18 +6,20 @@ package codex.extract;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import com.sun.tools.javac.api.JavacTool;
-import com.sun.tools.javac.file.JavacFileManager;
-import com.sun.tools.javac.file.ZipArchive;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import javac.tools.javac.api.JavacTool;
+import javac.tools.javac.file.*;
 import javax.tools.JavaFileObject;
 
 public class ZipUtils {
@@ -33,33 +35,77 @@ public class ZipUtils {
   }
 
   public static Predicate<ZipEntry> ofSuff (String suff) {
-    return (e -> e.getName().endsWith(suff));
+    return (ent -> ent.getName().endsWith(suff));
   }
 
   public static List<JavaFileObject> zipFiles (JavacTool javac, Path archive,
                                                Predicate<ZipEntry> filter) throws IOException {
-    ZipFile file = new ZipFile(archive.toFile());
     List<JavaFileObject> files = new ArrayList<>();
+    ZipFile file = new ZipFile(archive.toFile());
     JavacFileManager fm = javac.getStandardFileManager(null, null, null);
-    ZipArchive arch = new ZipArchive(fm, file);
     for (ZipEntry entry : file.stream().collect(Collectors.<ZipEntry>toList())) {
-      String name = entry.getName();
-      if (name.endsWith(".java") && filter.test(entry)) {
-        try {
-          files.add((ZipArchive.ZipFileObject)zfoCtor.newInstance(arch, name, entry));
-        } catch (Throwable t) {
-          t.printStackTrace(System.err);
-        }
+      if (entry.getName().endsWith(".java") && filter.test(entry)) {
+        files.add(new ZipFileObject(fm, archive, file, entry));
       }
     }
     return files;
   }
 
-  // the ZipFileObject constructor has protected access, but if we extend it then javac sees that
-  // our file object is declared outside com.sun.tools.javac and wraps it in such a way that causes
-  // it to choke when javac calls JavaFileManager.isSameFile (which it does when it encounters a
-  // package-info.java file); yay for a twisty maze of bullshit
-  private static Constructor<?> zfoCtor =
-    ZipArchive.ZipFileObject.class.getDeclaredConstructors()[0];
-  static  { zfoCtor.setAccessible(true); }
+  private static class ZipFileObject extends PathFileObject {
+    private final ZipFile zip;
+    private final ZipEntry entry;
+
+    private ZipFileObject(BaseFileManager fileManager, Path path, ZipFile zip, ZipEntry entry) {
+      super(fileManager, path);
+      this.zip = zip;
+      this.entry = entry;
+    }
+
+    @Override public String getName() {
+      // The use of ( ) to delimit the entry name is not ideal
+      // but it does match earlier behavior
+      return entry.getName() + "(" + path + ")";
+    }
+
+    @Override public Kind getKind() {
+      return BaseFileManager.getKind(entry.getName());
+    }
+
+    @Override public String inferBinaryName(Iterable<? extends Path> paths) {
+      Path root = path.getFileSystem().getRootDirectories().iterator().next();
+      return toBinaryName(root.relativize(path));
+    }
+
+    @Override public URI toUri() {
+      // Work around bug JDK-8134451:
+      // path.toUri() returns double-encoded URIs, that cannot be opened by URLConnection
+      return createJarUri(path, entry.getName());
+    }
+
+    @Override public InputStream openInputStream() throws IOException {
+      // fileManager.updateLastUsedTime();
+      return zip.getInputStream(entry);
+    }
+
+    @Override
+    public String toString() {
+      return "ZipFileObject[" + entry.getName() + ":" + path + "]";
+    }
+
+    @Override public PathFileObject getSibling(String baseName) {
+      // return new ZipFileObject(fileManager, path.resolveSibling(baseName), entry.getName());
+      throw new UnsupportedOperationException("getSibling(" + baseName + ")");
+    }
+
+    private static URI createJarUri(Path jarFile, String entryName) {
+      URI jarURI = jarFile.toUri().normalize();
+      String separator = entryName.startsWith("/") ? "!" : "!/";
+      try {
+        // The jar URI convention appears to be not to re-encode the jarURI
+        return new URI("jar:" + jarURI + separator + entryName);
+      } catch (URISyntaxException e) {
+        throw new CannotCreateUriError(jarURI + separator + entryName, e);
+      }
+    }
+  }
 }
