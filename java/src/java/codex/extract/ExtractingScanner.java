@@ -52,20 +52,22 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
       "Nested compilation units?! [visiting=" + _unit + ", nested=" + unit + "]");
     _unit = unit;
     try {
-      if (unit.packge == null) {
+      PackageTree ptree = unit.getPackage();
+      if (ptree == null) {
         warn("Null package? " + unit.sourcefile); // TODO
         return null;
       }
 
       // if there is no package directive, just let the classes be the top-level members; this won't
       // happen much "in the field"
-      if (unit.packge.isUnnamed()) {
+      ExpressionTree pntree = ptree.getPackageName();
+      if (pntree == null) {
         super.visitCompilationUnit(node, writer);
         return null;
       }
 
       // the top-level id for a comp unit is always the package
-      String pname = unit.packge.toString();
+      String pname = pntree.toString();
       _id = _id.plus(pname);
       String pkgpre = "package ";
 
