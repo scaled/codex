@@ -265,6 +265,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     _indices.values.foreach { _.clear() }
     _relsFrom.clear()
     _relsTo.clear()
+    _db.commit()
   }
 
   override def close () {
