@@ -568,7 +568,8 @@ public class ExtractingScanner extends TreePathScanner<Void,Writer> {
         String mname = text.substring(hidx+1);
         if (hidx == 0) {
           JCClassDecl cc = _class.peek();
-          return cc.sym.members().findFirst(cc.name.table.fromString(mname));
+          return cc.sym == null ? null :
+            cc.sym.members().findFirst(cc.name.table.fromString(mname));
         } else {
           return null; // TODO: look up type, then resolve method
         }
