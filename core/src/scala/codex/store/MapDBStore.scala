@@ -30,21 +30,13 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
 
   /** Creates a persistent store backed by `storePath`. */
   def this (name :String, storePath :Path) = this(
-    name, DBMaker.newFileDB(MapDBStore.checkSchema(storePath).toFile).
+    name, DBMaker.newFileDB(MapDBStore.checkSchema(name, storePath).toFile).
       mmapFileEnableIfSupported.
       cacheDisable.
       compressionEnable.
       asyncWriteEnable.
       closeOnJvmShutdown)
 
-  // MapDB insists on serializing they key and value serializers into a catalog file, so we have
-  // to do this hackery to ensure that our serialized serializers get the right store reference
-  // this also has to happen *before* we call maker.make() because the classes are resolved then
-  { IO.store = this
-    val thread = Thread.currentThread
-    val oloader = thread.getContextClassLoader
-    thread.setContextClassLoader(getClass.getClassLoader)
-  }
   private val _db = maker.make()
 
   private def createTreeMap[K,V] (name :String, kSz :BTreeKeySerializer[K], vSz :Serializer[V]) =
@@ -65,7 +57,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
   private val _srcInfo = createTreeMap("srcInfo", intSz, SRCINFO_SZ)
   private val _topDefs = createTreeSet("topDefs", longSz)
 
-  private val _defs    = createTreeMap("defs",    longSz, new DefSerializer())
+  private val _defs    = createTreeMap("defs",    longSz, DEF_SZ)
   private val _defSig  = createTreeMap("defSig",  longSz, SIG_SZ)
   private val _defDoc  = createTreeMap("defDoc",  longSz, DOC_SZ)
   private val _defMems = createTreeMap("defMems", longSz, IDS_SZ)
@@ -80,9 +72,6 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
   private val _indices = (Kind.values map { kind =>
     (kind -> createTreeSet("idx"+kind, new T2KS[String,Id](null, null, null)))
   }).toMap
-
-  // now clean up our static mess, blah
-  IO.store = null
 
   def defCount :Int = _defs.size
   def nameCount :Int = _fqNames.size
@@ -141,7 +130,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
       def storeDef (inf :DefInfo) {
         val defId = resolveDefId(inf.id, inf.kind, unitId)
         val df = inf.toDef(MapDBStore.this, defId, inf.outer.defId)
-        _defs.put(df.id, df)
+        _defs.put(df.id, PDef(df))
         newSourceIdsB += df.id
         if (df.outerId == null) _topDefs.add(df.id)
         _indices(df.kind).add(Fun.t2(df.name.toLowerCase, df.id))
@@ -269,6 +258,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
   }
 
   override def close () {
+    _db.commit()
     _db.close()
   }
 
@@ -283,10 +273,10 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     toDefs("sourceDefs", _srcDefs.get(unitId).asJava)
   }
 
-  override def `def` (defId :Id) = reqdef(defId, _defs.get(defId))
+  override def `def` (defId :Id) = reqdef(defId, _defs.get(defId)).toDef(this)
   override def `def` (ref :Ref.Global) = _fqNames.get(ref.toString) match {
     case null => Optional.empty()
-    case nmid => Optional.ofNullable(_defs.get(toDefId(nmid, _names.get(nmid).unitId)))
+    case nmid => Optional.ofNullable(_defs.get(toDefId(nmid, _names.get(nmid).unitId))).map(_.toDef(this))
   }
   override def ref (defId :Id) = globalRef(toNameId(defId))
 
@@ -381,7 +371,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
             val df = _defs.get(ent.b)
             if (df != null) { // index can contain stale entries
               // TODO: validate that def matches query (index may have stale link to reused def id)
-              if (!expOnly || df.exported) into.add(df)
+              if (!expOnly || df.exported) into.add(df.toDef(this))
             }
             loop(iter)
           }
@@ -419,7 +409,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
       val id = iter.next
       _defs.get(id) match {
         case null => println(s"Missing def [in=$where, id=$id]")
-        case df   => defs += df
+        case df   => defs += df.toDef(this)
       }
     }
     defs.build()
@@ -521,7 +511,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
 
 object MapDBStore {
 
-  def checkSchema (storePath :Path) :Path = {
+  def checkSchema (name :String, storePath :Path) :Path = {
     // check our schema version and blow away the old db if the schema is out of date since a store
     // is basically a fancy cache, it'll be rebuilt
     val versFile = Paths.get(storePath.toString+".v")
@@ -555,5 +545,5 @@ object MapDBStore {
     storePath
   }
 
-  private final val SCHEMA_VERS = 3
+  private final val SCHEMA_VERS = 4
 }
