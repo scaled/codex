@@ -34,7 +34,7 @@ object TestScalaCodex {
     override protected def debug  = dbg
   }
 
-  def main (args :Array[String]) {
+  def main (args :Array[String]) :Unit = {
     val store = new MapDBStore("test-codex", Paths.get("mapdb-codex"))
     try {
       (if (args.isEmpty) "help" else args(0)) match {
@@ -62,7 +62,7 @@ object TestScalaCodex {
     Paths.get(s"$home/.m2/repository/$groupPath/$artId/$vers/$artId-$vers$suff.jar")
   }
 
-  private def index (store :MapDBStore, what :String) {
+  private def index (store :MapDBStore, what :String) :Unit = {
     store.clear()
 
     val start = System.currentTimeMillis()
@@ -89,36 +89,36 @@ object TestScalaCodex {
     }
 
     val end = System.currentTimeMillis()
-    println("Extract and store: " + ((end-start)/1000L) + "s")
+    println(s"Extract and store: ${((end-start)/1000L)}s")
 
-    println(store.defCount + " defs.")
-    println(store.nameCount + " names.")
+    println(s"${store.defCount} defs.")
+    println(s"${store.nameCount} names.")
   }
 
-  private def tops (store :MapDBStore) {
+  private def tops (store :MapDBStore) :Unit = {
     for (top <- store.topLevelDefs()) {
       if (top.kind != Kind.SYNTHETIC) println(top)
     }
   }
 
-  private def dump (store :MapDBStore, what :String) {
+  private def dump (store :MapDBStore, what :String) :Unit = {
     val defo = store.`def`(Ref.Global.fromString(what))
-    if (!defo.isPresent) System.err.println("No def found for '" + what + "'.")
+    if (!defo.isPresent) System.err.println(s"No def found for '$what'.")
     else dump("", defo.get)
   }
 
-  private def dump (indent :String, df :Def) {
+  private def dump (indent :String, df :Def) :Unit = {
     // printDef(indent, def, "")
-    val sig = if (df.sig.isPresent) df.sig.get.text else (df.kind + " " + df.name)
-    println(indent + sig + " (" + df.kind + ")")
-    if (df.kind == Kind.TYPE) println(indent + "  (source: " + df.source + ")")
+    val sig = if (df.sig.isPresent) df.sig.get.text else (s"${df.kind} ${df.name}")
+    println(s"$indent$sig (${df.kind})")
+    if (df.kind == Kind.TYPE) println(s"$indent  (source: ${df.source})")
     val iter = df.members.iterator ; while (iter.hasNext) {
       val mdef = iter.next
-      if (mdef.kind != Kind.SYNTHETIC) dump(indent + "  ", mdef)
+      if (mdef.kind != Kind.SYNTHETIC) dump(s"${indent}  ", mdef)
     }
   }
 
-  private def printDef (prefix :String, df :Def, suffix :String) {
-    println(prefix + df.kind + " " + df.name + " " + df.id + suffix)
+  private def printDef (prefix :String, df :Def, suffix :String) :Unit = {
+    println(s"$prefix${df.kind} ${df.name} ${df.id}$suffix")
   }
 }

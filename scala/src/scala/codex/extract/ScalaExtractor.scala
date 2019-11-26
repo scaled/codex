@@ -17,7 +17,7 @@ import scala.tools.nsc.util.ClassPath
 import scala.tools.nsc.{Global, Settings}
 
 abstract class ScalaExtractor extends Extractor {
-  import scala.collection.JavaConverters._
+  import scala.jdk.CollectionConverters._
 
   /** Provides the classpath used by the compiler. */
   def classpath :Iterable[Path]
@@ -34,7 +34,7 @@ abstract class ScalaExtractor extends Extractor {
   def process (file :(String, String), writer :Writer) :Unit = process(List(file), writer)
 
   /** Processes test `files` (a list of `(name, code)` pairs). Metadata is emitted to `writer`. */
-  def process (files :List[(String,String)], writer :Writer) {
+  def process (files :List[(String,String)], writer :Writer) :Unit = {
     process0(files.map { case (name, code) => new BatchSourceFile(name, code) }, writer)
   }
 
@@ -47,7 +47,7 @@ abstract class ScalaExtractor extends Extractor {
   /** Output from extractor compiler is routed through here. */
   protected def log (msg :String) = println(msg)
 
-  private def process0 (sources :List[SourceFile], writer :Writer) {
+  private def process0 (sources :List[SourceFile], writer :Writer) :Unit = {
     val settings = new Settings(log)
     settings.processArguments(compilerArgs, true)
     settings.classpath.value = ClassPath.join(classpath.map(_.toString).toSeq :_*)
@@ -56,7 +56,7 @@ abstract class ScalaExtractor extends Extractor {
     settings.outputDirs.setSingleOutput(new VirtualDirectory("(memory)", None))
 
     val logWriter = new StringWriter() {
-      override def flush () {
+      override def flush () :Unit = {
         log(toString)
         getBuffer.setLength(0)
       }
@@ -64,7 +64,7 @@ abstract class ScalaExtractor extends Extractor {
     val reporter = new ConsoleReporter(settings, Console.in, new PrintWriter(logWriter))
     val compiler = new Global(settings, reporter) with Positions {
       val rcomp = new ExtractorComponent(this, writer, debug)
-      override protected def computeInternalPhases () {
+      override protected def computeInternalPhases () :Unit = {
         super.computeInternalPhases
         phasesSet += rcomp
       }

@@ -16,7 +16,7 @@ import codex.TestScalaCodex
 class ScalaExtractorTest {
   def extractor = TestScalaCodex.extractor(true)
 
-  @Test def testBasics () {
+  @Test def testBasics () :Unit = {
     println(process("TestA.scala", Seq(
       "package pants",
       "package bottoms.cuffs",
@@ -34,7 +34,7 @@ class ScalaExtractorTest {
       "}")))
   }
 
-  // @Test def testRefinement () {
+  // @Test def testRefinement () :Unit = {
   //   println(process("Refinement.scala", Seq(
   //     "package pants",
   //     "object TestA {",
@@ -47,22 +47,22 @@ class ScalaExtractorTest {
   //     "}")))
   // }
 
-  // @Test def testSelect () {
+  // @Test def testSelect () :Unit = {
   //   println(process("Select.scala", Seq(
   //     "package pants",
   //     "object TestA {",
-  //     "  def foo (count :Int) {" ,
+  //     "  def foo (count :Int) :Unit = {" ,
   //     "    Seq(count)",
   //     "    bar(count)",
   //     "    this.bar(count)",
   //     "    TestA.this.bar(count)",
   //     "  }",
-  //     "  private def bar (count :Int) {",
+  //     "  private def bar (count :Int) :Unit = {",
   //     "  }",
   //     "}")))
   // }
 
-  // @Test def testNew () {
+  // @Test def testNew () :Unit = {
   //   println(process("New.scala", Seq(
   //     "package pants",
   //     "import java.util.{ArrayList => JArrayList}",
@@ -76,7 +76,7 @@ class ScalaExtractorTest {
   // }
 
   // TODO: too much desugaring happens in here?
-  // @Test def testForComp () {
+  // @Test def testForComp () :Unit = {
   //   println(process("ForComp.scala", Seq(
   //     "package pants",
   //     "object TestA {",
@@ -84,7 +84,7 @@ class ScalaExtractorTest {
   //     "}")))
   // }
 
-  @Test def testMethodRefs () {
+  @Test def testMethodRefs () :Unit = {
     println(process("MethodRefs.scala", Seq(
       "package pants",
       "class Foo {",

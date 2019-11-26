@@ -27,7 +27,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
   private def debug (msg :Any) :Unit = if (debug) println(msg)
 
   def newPhase (prev :Phase) :Phase = new StdPhase(prev) {
-    def apply (unit :CompilationUnit) {
+    def apply (unit :CompilationUnit) :Unit = {
       println("Processing " + unit + "...")
       val sfile = unit.source.file
       val ufile = sfile.underlyingSource getOrElse sfile
@@ -44,14 +44,14 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
     private val _ignores = MSet[Tree]()
     private var _lastField :ValDef = _
 
-    private def openDef (name :String, kind :CKind, flavor :Flavor, isExp :Boolean, acc :Access) {
+    private def openDef (name :String, kind :CKind, flavor :Flavor, isExp :Boolean, acc :Access) :Unit = {
       writer.openDef(_id, name, kind, flavor, isExp, acc,
                      _curpos.offset, _curpos.start, _curpos.end)
     }
 
     private def emitUse (whence :String, sym :Symbol, name :String, tpos :Position) :Unit =
       emitUse(whence, sym, name, decode(tpos))
-    private def emitUse (whence :String, sym :Symbol, name :String, pos :Pos) {
+    private def emitUse (whence :String, sym :Symbol, name :String, pos :Pos) :Unit = {
       // positions without start/end or with bogus offset have generally been inserted during a
       // later compiler phase (e.g. type inference) and are not in the source code; so ignore
       if (pos.start >= 0 && pos.offset < _curpos.end) {
@@ -59,7 +59,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
         writer.emitUse(ref(sym), kind(sym), pos.offset, name)
       }
     }
-    private def emitUse (whence :String, sym :Symbol, pos :Pos) {
+    private def emitUse (whence :String, sym :Symbol, pos :Pos) :Unit = {
       // positions without start/end or with bogus offset have generally been inserted during a
       // later compiler phase (e.g. type inference) and are not in the source code; so ignore
       if (pos.start >= 0 && pos.offset < _curpos.end) {
@@ -349,7 +349,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
       else if (mods hasFlag Flags.PRIVATE) Access.PRIVATE
       else Access.PUBLIC
 
-    private def withTree (id :String, tree :Tree)(block : =>Unit) {
+    private def withTree (id :String, tree :Tree)(block : =>Unit) :Unit = {
       val opos = _curpos
       _curpos = decode(tree.pos)
       _id = _id.plus(id)
@@ -427,7 +427,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
         printTypeSignature
       }
 
-      private def printName (name :String, tree :Tree) {
+      private def printName (name :String, tree :Tree) :Unit = {
         uses += SigUse(ref(tree.symbol), name, kind(tree.symbol), pos)
         print(name)
       }
@@ -443,7 +443,7 @@ class ExtractorComponent (val global :Global, writer :Writer, debug :Boolean)
           printTypeParams(tparams); print(rhs)
       }
 
-      override def printFlags (flags :Long, privateWithin :String) {
+      override def printFlags (flags :Long, privateWithin :String) :Unit = {
         import Flags._
         val fflags = flags & (CASE|ABSTRACT|PRIVATE|PROTECTED) // TODO: anything else
         super.printFlags(fflags, privateWithin)

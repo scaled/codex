@@ -19,7 +19,7 @@ import scaled._
 
 class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(name) {
 
-  import scala.collection.JavaConverters._
+  import scala.jdk.CollectionConverters._
   import BTreeKeySerializer.{
     ZERO_OR_POSITIVE_LONG => longSz, ZERO_OR_POSITIVE_INT => intSz, STRING => stringSz,
     Tuple2KeySerializer => T2KS, Tuple3KeySerializer => T3KS}
@@ -84,11 +84,11 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     private[this] val COMMIT_EVERY = 100
     private[this] val _nUseBySrc = new HashMap[Id,Set.Builder[Integer]]()
 
-    override def openSession () {
+    override def openSession () :Unit = {
       _writeCount = 0
     }
 
-    override def closeSession () {
+    override def closeSession () :Unit = {
       // update our "uses by unit id" indices
       _nUseBySrc.toMapV foreach { (refId, nunitsB) =>
         val units = _useBySrc.getOrDefault(refId, Set())
@@ -102,7 +102,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
       _db.commit()
     }
 
-    override protected def storeUnit (source :Source, topDef :DefInfo) {
+    override protected def storeUnit (source :Source, topDef :DefInfo) :Unit = {
       val indexed = System.currentTimeMillis // note the time
 
       // resolve the unit id for this source
@@ -127,7 +127,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
           ub.build()
       }
 
-      def storeDef (inf :DefInfo) {
+      def storeDef (inf :DefInfo) :Unit = {
         val defId = resolveDefId(inf.id, inf.kind, unitId)
         val df = inf.toDef(MapDBStore.this, defId, inf.outer.defId)
         _defs.put(df.id, PDef(df))
@@ -136,7 +136,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
         _indices(df.kind).add(Fun.t2(df.name.toLowerCase, df.id))
       }
 
-      def storeDefs (defs :JIterable[DefInfo]) {
+      def storeDefs (defs :JIterable[DefInfo]) :Unit = {
         if (defs != null) defs foreach { df =>
           storeDef(df)
           storeDefs(df.defs) // this will populate def.memDefIds with our member def ids
@@ -158,7 +158,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
       // generate the set of all def ids in this compunit
       val newSourceIds = newSourceIdsB.result
 
-      def storeData (inf :DefInfo) {
+      def storeData (inf :DefInfo) :Unit = {
         val defId = inf.defId
         if (inf.sig != null) {
           _defSig.put(defId, PSig(inf.sig.text, resolveUses(inf.sig.uses)))
@@ -210,7 +210,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
 
       // then go through and store additional data like sigs, docs and uses now that all the
       // defs are stored and IDed, we can resolve many use refs to more compact local refs
-      def storeDatas (defs :JIterable[DefInfo]) {
+      def storeDatas (defs :JIterable[DefInfo]) :Unit = {
         if (defs != null) defs foreach { df =>
           storeData(df)
           storeDatas(df.defs)
@@ -239,7 +239,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     }
   }
 
-  override def clear () {
+  override def clear () :Unit = {
     _names.clear()
     _fqNames.clear()
     _srcToId.clear()
@@ -257,7 +257,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     _db.commit()
   }
 
-  override def close () {
+  override def close () :Unit = {
     _db.commit()
     _db.close()
   }
@@ -319,7 +319,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     if (nameId == null) Collections.emptyMap[Source,Array[Int]]
     else {
       val uses = new HashMap[Source,Array[Int]]()
-      def addUses (unitId :Integer) {
+      def addUses (unitId :Integer) :Unit = {
         val info = _srcInfo.get(unitId)
         if (info == null) {
           println(s"Def reports use in non-existent source [def=$df, unitId=$unitId]")
@@ -359,12 +359,12 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     s"$unitId:$defId"
   }
 
-  override def find (query :Query, expOnly :Boolean, into :JList[Def]) {
+  override def find (query :Query, expOnly :Boolean, into :JList[Def]) :Unit = {
     val pre = query.prefix
     val name = query.name
     val lowKey = Fun.t2(name, null :Id)
     query.kinds foreach { kind =>
-      def loop (iter :JIterator[Fun.Tuple2[String,Id]]) {
+      def loop (iter :JIterator[Fun.Tuple2[String,Id]]) :Unit = {
         if (iter.hasNext) {
           val ent = iter.next
           if (!(pre && !ent.a.startsWith(name)) && !(!pre && !ent.a.equals(name))) {
@@ -467,7 +467,7 @@ class MapDBStore private (name :String, maker :DBMaker[_]) extends ProjectStore(
     uses
   }
 
-  private def removeDefs (defIds :IdSet) {
+  private def removeDefs (defIds :IdSet) :Unit = {
     println(s"Removing ${defIds.size} defs.")
     // we want to remove defs from highest def id to lowest,
     // so that we're sure to remove children before parents

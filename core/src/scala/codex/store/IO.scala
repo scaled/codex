@@ -44,7 +44,7 @@ object IO {
 
   class SourceInfoSerializer extends Serializer[SourceInfo] with Serializable {
     override def fixedSize = -1
-    override def serialize (out :DataOutput, info :SourceInfo) {
+    override def serialize (out :DataOutput, info :SourceInfo) :Unit = {
       out.writeUTF(info.source)
       out.writeLong(info.indexed)
     }
@@ -55,7 +55,7 @@ object IO {
 
   class IdSetSerializer extends Serializer[IdSet] with Serializable {
     override def fixedSize = -1
-    override def serialize (out :DataOutput, ids :IdSet) {
+    override def serialize (out :DataOutput, ids :IdSet) :Unit = {
       out.writeInt(ids.size)
       ids foreach { out.writeLong(_) }
     }
@@ -71,7 +71,7 @@ object IO {
 
   class IntSetSerializer extends Serializer[Set[Integer]] with Serializable {
     override def fixedSize = -1
-    override def serialize (out :DataOutput, ids :Set[Integer]) {
+    override def serialize (out :DataOutput, ids :Set[Integer]) :Unit = {
       out.writeInt(ids.size)
       ids foreach { out.writeInt(_) }
     }
@@ -86,7 +86,7 @@ object IO {
 
   class NameSerializer extends Serializer[Name] with Serializable {
     override def fixedSize = -1
-    override def serialize (out :DataOutput, name :Name) {
+    override def serialize (out :DataOutput, name :Name) :Unit = {
       out.writeUTF(name.id)
       out.writeLong(name.parentId)
       writeEnum(out, name.kind)
@@ -99,7 +99,7 @@ object IO {
 
   class SigSerializer extends Serializer[PSig] with Serializable {
     override def fixedSize = -1
-    override def serialize (out :DataOutput, sig :PSig) {
+    override def serialize (out :DataOutput, sig :PSig) :Unit = {
       out.writeUTF(sig.text)
       writeUses(out, sig.uses)
     }
@@ -109,7 +109,7 @@ object IO {
 
   class DocSerializer extends Serializer[PDoc] with Serializable {
     override def fixedSize = -1
-    override def serialize (out :DataOutput, doc :PDoc) {
+    override def serialize (out :DataOutput, doc :PDoc) :Unit = {
       out.writeInt(doc.offset)
       out.writeInt(doc.length)
       writeUses(out, doc.uses)
@@ -140,7 +140,7 @@ object IO {
     in.readUTF /*name*/, in.readInt /*offset*/,
     in.readInt /*bodyStart*/, in.readInt /*bodyEnd*/)
 
-  def writeDef (out :DataOutput, df :PDef) {
+  def writeDef (out :DataOutput, df :PDef) :Unit = {
     out.writeLong(df.id)
     out.writeLong(null2zero(df.outerId))
     writeEnum(out, df.kind)
@@ -154,7 +154,7 @@ object IO {
   }
 
   def readUse (in :DataInput) = PUse(in.readLong(), in.readInt(), in.readInt())
-  def writeUse (out :DataOutput, use :PUse) {
+  def writeUse (out :DataOutput, use :PUse) :Unit = {
     out.writeLong(use.nameId)
     out.writeInt(use.offset)
     out.writeInt(use.length)
@@ -166,7 +166,7 @@ object IO {
     var ii = 0 ; while (ii < count) { ub += readUse(in) ; ii += 1 }
     ub.build()
   }
-  def writeUses (out :DataOutput, uses :Seq[PUse]) {
+  def writeUses (out :DataOutput, uses :Seq[PUse]) :Unit = {
     out.writeInt(uses.size)
     var iter = uses.iterator ; while (iter.hasNext) writeUse(out, iter.next)
   }
