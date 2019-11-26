@@ -93,6 +93,6 @@ abstract class ScalaExtractor extends Extractor {
         }
       }
     }
-    files
+    files.toSeq
   }
 }
