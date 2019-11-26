@@ -77,7 +77,7 @@ public class JDKPlatformProvider implements PlatformProvider {
         SUPPORTED_JAVA_PLATFORM_VERSIONS = new TreeSet<>();
         Path ctSymFile = findCtSym();
         if (Files.exists(ctSymFile)) {
-            try (FileSystem fs = FileSystems.newFileSystem(ctSymFile, null);
+            try (FileSystem fs = FileSystems.newFileSystem(ctSymFile, (Map<String, String>)null);
                  DirectoryStream<Path> dir =
                          Files.newDirectoryStream(fs.getRootDirectories().iterator().next())) {
                 for (Path section : dir) {
@@ -117,7 +117,7 @@ public class JDKPlatformProvider implements PlatformProvider {
                 FileSystem fs = ctSym2FileSystem.get(file);
                 if (fs == null) {
                     try {
-                        ctSym2FileSystem.put(file, fs = FileSystems.newFileSystem(file, null));
+                        ctSym2FileSystem.put(file, fs = FileSystems.newFileSystem(file, (Map<String, String>)null));
                     } catch (IOException ex) {
                         throw new IllegalStateException(ex);
                     }

@@ -380,7 +380,7 @@ public class Locations {
                         /* Not a recognized extension; open it to see if
                          it looks like a valid zip file. */
                         try {
-                            FileSystems.newFileSystem(file, null).close();
+                                FileSystems.newFileSystem(file, (Map<String,String>)null).close();
                             if (warn) {
                                 log.warning(Lint.LintCategory.PATH,
                                         "unexpected.archive.file", file);

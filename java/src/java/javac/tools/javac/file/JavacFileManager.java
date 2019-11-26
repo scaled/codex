@@ -516,7 +516,7 @@ public class JavacFileManager extends BaseFileManager implements StandardJavaFil
                 Assert.checkNonNull(jarFSProvider, "should have been caught before!");
                 this.fileSystem = jarFSProvider.newFileSystem(archivePath, env);
             } else {
-                this.fileSystem = FileSystems.newFileSystem(archivePath, null);
+                this.fileSystem = FileSystems.newFileSystem(archivePath, (Map<String,String>)null);
             }
             packages = new HashMap<>();
             for (Path root : fileSystem.getRootDirectories()) {
